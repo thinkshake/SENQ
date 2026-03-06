@@ -1,15 +1,15 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { formatXrp } from "@/lib/api"
+import { formatEth } from "@/lib/api"
 
 type ProfileSectionProps = {
   walletAddress: string
   balance: string | null
   weightScore: number
   betCount: number
-  totalBetDrops: string
-  totalEffectiveDrops: string
+  totalBetWei: string
+  totalEffectiveWei: string
   onDisconnect: () => void
 }
 
@@ -18,8 +18,8 @@ export function ProfileSection({
   balance,
   weightScore,
   betCount,
-  totalBetDrops,
-  totalEffectiveDrops,
+  totalBetWei,
+  totalEffectiveWei,
   onDisconnect,
 }: ProfileSectionProps) {
   return (
@@ -43,7 +43,7 @@ export function ProfileSection({
         <div className="rounded-lg border border-border p-4">
           <p className="text-xs text-muted-foreground">残高</p>
           <p className="mt-2 font-mono text-xl font-bold text-foreground">
-            {balance ? formatXrp(balance) : "—"}
+            {balance ? formatEth(balance) : "—"}
           </p>
         </div>
         <div className="rounded-lg border border-border p-4">
@@ -61,14 +61,14 @@ export function ProfileSection({
         <div className="rounded-lg border border-border p-4">
           <p className="text-xs text-muted-foreground">総賭け金</p>
           <p className="mt-2 font-mono text-xl font-bold text-foreground">
-            {formatXrp(totalBetDrops)}
+            {formatEth(totalBetWei)}
           </p>
         </div>
       </div>
 
-      {totalEffectiveDrops !== totalBetDrops && (
+      {totalEffectiveWei !== totalBetWei && (
         <p className="mt-2 text-right text-xs text-muted-foreground">
-          実効総額: {formatXrp(totalEffectiveDrops)}
+          実効総額: {formatEth(totalEffectiveWei)}
         </p>
       )}
     </section>

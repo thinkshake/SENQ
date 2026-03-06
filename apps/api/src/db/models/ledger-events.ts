@@ -1,42 +1,39 @@
 /**
- * DB model for the ledger_events table.
+ * DB model for the chain_events table.
  *
- * Provides idempotent ingestion of XRPL transaction events via
+ * Provides idempotent ingestion of EVM transaction events via
  * INSERT OR IGNORE on the unique tx_hash column.
  */
 import { getDb, generateId } from "../index";
 
 // ── Types ──────────────────────────────────────────────────────────
 
-export interface LedgerEvent {
+export interface ChainEvent {
   id: string;
   tx_hash: string;
   event_type: string;
   market_id: string | null;
   payload_json: string;
-  ledger_index: number;
+  block_number: number;
   created_at: string;
 }
 
-export interface LedgerEventInsert {
+export interface ChainEventInsert {
   txHash: string;
   eventType: string;
   marketId?: string;
   payloadJson: string;
-  ledgerIndex: number;
+  blockNumber: number;
 }
 
 // ── Queries ────────────────────────────────────────────────────────
 
-/**
- * Insert a ledger event idempotently (duplicates silently ignored).
- */
-export function insertLedgerEvent(event: LedgerEventInsert): void {
+export function insertChainEvent(event: ChainEventInsert): void {
   const db = getDb();
   const id = generateId("evt");
   db.query(
-    `INSERT OR IGNORE INTO ledger_events
-       (id, tx_hash, event_type, market_id, payload_json, ledger_index)
+    `INSERT OR IGNORE INTO chain_events
+       (id, tx_hash, event_type, market_id, payload_json, block_number)
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run(
     id,
@@ -44,56 +41,24 @@ export function insertLedgerEvent(event: LedgerEventInsert): void {
     event.eventType,
     event.marketId ?? null,
     event.payloadJson,
-    event.ledgerIndex
+    event.blockNumber
   );
 }
 
-/**
- * Lookup a single event by its XRPL transaction hash.
- */
-export function getLedgerEventByTxHash(
-  txHash: string
-): LedgerEvent | null {
+export function getChainEventByTxHash(txHash: string): ChainEvent | null {
   const db = getDb();
   return (
     db
-      .query("SELECT * FROM ledger_events WHERE tx_hash = ?")
-      .get(txHash) as LedgerEvent | null
+      .query("SELECT * FROM chain_events WHERE tx_hash = ?")
+      .get(txHash) as ChainEvent | null
   );
 }
 
-/**
- * List all events for a market, ascending by ledger index.
- */
-export function getLedgerEventsByMarket(
-  marketId: string
-): LedgerEvent[] {
+export function getChainEventsByMarket(marketId: string): ChainEvent[] {
   const db = getDb();
   return db
     .query(
-      "SELECT * FROM ledger_events WHERE market_id = ? ORDER BY ledger_index ASC"
+      "SELECT * FROM chain_events WHERE market_id = ? ORDER BY block_number ASC"
     )
-    .all(marketId) as LedgerEvent[];
-}
-
-/**
- * List events filtered by type (and optionally market).
- */
-export function getLedgerEventsByType(
-  eventType: string,
-  marketId?: string
-): LedgerEvent[] {
-  const db = getDb();
-  if (marketId) {
-    return db
-      .query(
-        "SELECT * FROM ledger_events WHERE event_type = ? AND market_id = ? ORDER BY ledger_index ASC"
-      )
-      .all(eventType, marketId) as LedgerEvent[];
-  }
-  return db
-    .query(
-      "SELECT * FROM ledger_events WHERE event_type = ? ORDER BY ledger_index ASC"
-    )
-    .all(eventType) as LedgerEvent[];
+    .all(marketId) as ChainEvent[];
 }

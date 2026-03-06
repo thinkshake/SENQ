@@ -1,12 +1,11 @@
 /**
- * Resolution & Payout API routes.
+ * Payout API routes.
+ * Market resolution is handled by routes/markets.ts POST /:id/resolve.
  */
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import {
-  resolveMarket,
-  confirmResolution,
   executePayouts,
   confirmPayout,
   getPayoutsForMarket,
@@ -21,16 +20,6 @@ const resolve = new Hono();
 
 // ── Schemas ────────────────────────────────────────────────────────
 
-const resolveMarketSchema = z.object({
-  outcome: z.enum(["YES", "NO"]),
-  action: z.enum(["finish", "cancel"]),
-});
-
-const confirmResolutionSchema = z.object({
-  escrowTxHash: z.string().min(1),
-  action: z.enum(["finish", "cancel"]),
-});
-
 const executePayoutsSchema = z.object({
   batchSize: z.number().int().min(1).max(100).optional(),
 });
@@ -43,73 +32,8 @@ const confirmPayoutSchema = z.object({
 // ── Routes ─────────────────────────────────────────────────────────
 
 /**
- * POST /markets/:id/resolve - Initiate market resolution (admin only)
- * Returns EscrowFinish or EscrowCancel tx for multi-sign
- */
-resolve.post("/markets/:id/resolve", zValidator("json", resolveMarketSchema), async (c) => {
-  const adminKey = c.req.header("X-Admin-Key");
-  if (!adminKey || adminKey !== config.adminApiKey) {
-    return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
-  }
-
-  const marketId = c.req.param("id");
-  const body = c.req.valid("json");
-
-  try {
-    const result = resolveMarket({
-      marketId,
-      outcome: body.outcome,
-      action: body.action,
-    });
-
-    return c.json({
-      data: {
-        marketId: result.market.id,
-        status: result.market.status,
-        outcome: result.market.outcome,
-        escrowTx: result.escrowTx,
-        payoutsCreated: result.payoutsCreated,
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to resolve market";
-    return c.json({ error: { code: "VALIDATION_ERROR", message } }, 400);
-  }
-});
-
-/**
- * POST /markets/:id/resolve/confirm - Confirm resolution after tx validated
- */
-resolve.post("/markets/:id/resolve/confirm", zValidator("json", confirmResolutionSchema), async (c) => {
-  const adminKey = c.req.header("X-Admin-Key");
-  if (!adminKey || adminKey !== config.adminApiKey) {
-    return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
-  }
-
-  const marketId = c.req.param("id");
-  const body = c.req.valid("json");
-
-  try {
-    const market = confirmResolution(marketId, body.escrowTxHash, body.action);
-    if (!market) {
-      return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
-    }
-
-    return c.json({
-      data: {
-        marketId: market.id,
-        status: market.status,
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to confirm resolution";
-    return c.json({ error: { code: "VALIDATION_ERROR", message } }, 400);
-  }
-});
-
-/**
  * POST /markets/:id/payouts - Execute payouts (admin only)
- * Returns Payment tx payloads for batch processing
+ * Returns EVM payment tx objects for batch processing
  */
 resolve.post("/markets/:id/payouts", zValidator("json", executePayoutsSchema), async (c) => {
   const adminKey = c.req.header("X-Admin-Key");
@@ -191,7 +115,7 @@ resolve.get("/markets/:id/payouts", async (c) => {
       payouts: payouts.map((p) => ({
         id: p.id,
         userId: p.user_id,
-        amountDrops: p.amount_drops,
+        amountWei: p.amount_wei,
         status: p.status,
         payoutTx: p.payout_tx,
         createdAt: p.created_at,
@@ -201,8 +125,8 @@ resolve.get("/markets/:id/payouts", async (c) => {
         pending: stats.pending,
         sent: stats.sent,
         failed: stats.failed,
-        totalDrops: stats.totalDrops,
-        sentDrops: stats.sentDrops,
+        totalWei: stats.totalWei,
+        sentWei: stats.sentWei,
       },
     },
   });
@@ -222,7 +146,7 @@ resolve.get("/users/:address/payouts", async (c) => {
         id: p.id,
         marketId: p.market_id,
         marketTitle: market?.title,
-        amountDrops: p.amount_drops,
+        amountWei: p.amount_wei,
         status: p.status,
         payoutTx: p.payout_tx,
         createdAt: p.created_at,

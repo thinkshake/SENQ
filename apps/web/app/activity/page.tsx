@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/contexts/WalletContext";
 import { useUser } from "@/contexts/UserContext";
-import { formatXrp } from "@/lib/api";
+import { formatEth } from "@/lib/api";
 
 export default function ActivityPage() {
   const wallet = useWallet();
@@ -18,16 +18,16 @@ export default function ActivityPage() {
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold mb-4">ウォレットを接続</h1>
           <p className="text-muted-foreground mb-8">
-            GemWalletを接続してアクティビティ履歴を確認しましょう。
+            MetaMaskを接続してアクティビティ履歴を確認しましょう。
           </p>
-          {!wallet.gemWalletInstalled ? (
+          {!wallet.metaMaskInstalled ? (
             <a
-              href="https://gemwallet.app"
+              href="https://metamask.io"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button className="w-full" size="lg">
-                GemWalletをインストール
+                MetaMaskをインストール
               </Button>
             </a>
           ) : (
@@ -37,7 +37,7 @@ export default function ActivityPage() {
               className="w-full"
               size="lg"
             >
-              {wallet.loading ? "接続中..." : "GemWalletを接続"}
+              {wallet.loading ? "接続中..." : "MetaMaskを接続"}
             </Button>
           )}
         </div>
@@ -99,7 +99,7 @@ export default function ActivityPage() {
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      {formatXrp(bet.amountDrops)}
+                      {formatEth(bet.amountWei)}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(bet.createdAt).toLocaleDateString("ja-JP")}

@@ -34,7 +34,7 @@ export function getUserByWallet(address: string): User | null {
 /**
  * Create a new user.
  */
-export function createUser(walletAddress: string, provider: string = "gemwallet"): User {
+export function createUser(walletAddress: string, provider: string = "metamask"): User {
   const db = getDb();
   const id = generateId("usr");
 
@@ -49,7 +49,7 @@ export function createUser(walletAddress: string, provider: string = "gemwallet"
  * Get or create a user by wallet address.
  * Returns existing user if found, otherwise creates a new one.
  */
-export function getOrCreateUser(walletAddress: string, provider: string = "gemwallet"): User {
+export function getOrCreateUser(walletAddress: string, provider: string = "metamask"): User {
   const existing = getUserByWallet(walletAddress);
   if (existing) {
     return existing;

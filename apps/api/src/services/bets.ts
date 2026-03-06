@@ -3,15 +3,6 @@
  */
 import { config } from "../config";
 import {
-  buildTrustSet,
-  buildBetPayment,
-  buildMintPayment,
-  buildOutcomeBetPayment,
-  buildOutcomeTrustSet,
-  buildOutcomeMintPayment,
-} from "../xrpl/tx-builder";
-import type { MitateMemoData } from "../xrpl/memo";
-import {
   createBet,
   getBetById,
   getBetByPaymentTx,
@@ -32,7 +23,6 @@ import {
   addToPool,
   addToPoolMultiOutcome,
 } from "../db/models/markets";
-import { getEscrowByMarket, addToEscrow } from "../db/models/escrows";
 import {
   getOutcomeById,
   addToOutcomeTotal,
@@ -44,23 +34,20 @@ import {
   calculateWeightScore,
 } from "../db/models/user-attributes";
 import { getOrCreateUser, getUserById } from "../db/models/users";
-import { signAndSubmitWithIssuer } from "../xrpl/client";
-import type { Payment } from "xrpl";
 
 // ── Types ──────────────────────────────────────────────────────────
 
 export interface PlaceBetInput {
   marketId: string;
   outcomeId: string;
-  amountDrops: string;
+  amountWei: string;
   userAddress: string;
 }
 
 export interface PlaceBetResult {
   bet: Bet;
   weightScore: number;
-  effectiveAmountDrops: string;
-  trustSetTx?: unknown;
+  effectiveAmountWei: string;
   paymentTx: unknown;
 }
 
@@ -73,252 +60,96 @@ export interface ConfirmBetInput {
 
 /**
  * Create a bet intent for a multi-outcome market.
- * 1. Validate market is open and deadline not passed
- * 2. Look up user weight from attributes
- * 3. Create pending bet record with weight and effective amount
- * 4. Return TrustSet and Payment tx payloads for signing
+ * Returns an EVM payment tx object for the user to sign and submit.
  */
 export function placeBet(input: PlaceBetInput): PlaceBetResult {
-  // Validate amount
-  const amount = BigInt(input.amountDrops);
+  const amount = BigInt(input.amountWei);
   if (amount <= 0n) {
     throw new Error("Bet amount must be positive");
   }
 
-  // Validate market
   const market = getMarketById(input.marketId);
-  if (!market) {
-    throw new Error("Market not found");
-  }
-  if (!canPlaceBet(market)) {
-    throw new Error("Market is not accepting bets");
-  }
+  if (!market) throw new Error("Market not found");
+  if (!canPlaceBet(market)) throw new Error("Market is not accepting bets");
 
-  // Validate outcome belongs to this market
   const outcome = getOutcomeById(input.outcomeId);
-  if (!outcome) {
-    throw new Error("Outcome not found");
-  }
-  if (outcome.market_id !== input.marketId) {
-    throw new Error("Outcome does not belong to this market");
-  }
+  if (!outcome) throw new Error("Outcome not found");
+  if (outcome.market_id !== input.marketId) throw new Error("Outcome does not belong to this market");
 
-  // Get or create user record for foreign key constraint
   const user = getOrCreateUser(input.userAddress);
 
-  // Calculate weight score from user attributes
   const attributes = getAttributesForUser(input.userAddress);
   const weightScore = calculateWeightScore(attributes);
-  const effectiveAmountDrops = Math.round(Number(input.amountDrops) * weightScore).toString();
-
-  // Create pending bet
-  const memo: MitateMemoData = {
-    v: 1,
-    type: "bet",
-    marketId: input.marketId,
-    outcomeId: input.outcomeId,
-    amount: input.amountDrops,
-    timestamp: new Date().toISOString(),
-  };
+  const effectiveAmountWei = Math.round(Number(input.amountWei) * weightScore).toString();
 
   const bet = createBet({
     marketId: input.marketId,
     userId: user.id,
-    outcome: "YES", // Legacy field - kept for backward compat
+    outcome: "YES",
     outcomeId: input.outcomeId,
-    amountDrops: input.amountDrops,
+    amountWei: input.amountWei,
     weightScore,
-    effectiveAmountDrops,
-    memoJson: JSON.stringify(memo),
+    effectiveAmountWei,
+    memoJson: JSON.stringify({ marketId: input.marketId, outcomeId: input.outcomeId }),
   });
 
-  // Build TrustSet tx for outcome token
-  const trustSetTx = outcome.currency_code
-    ? buildOutcomeTrustSet({
-        account: input.userAddress,
-        issuerAddress: config.issuerAddress,
-        marketId: input.marketId,
-        outcomeId: input.outcomeId,
-        currencyCode: outcome.currency_code,
-        limitValue: effectiveAmountDrops,
-      })
-    : undefined;
-
-  // Build Payment tx (user pays XRP to operator)
-  // Use market's stored operator address (set at market creation)
   const operatorAddress = market.operator_address || config.operatorAddress;
-  
-  // Debug logging
-  console.log("[placeBet] market.operator_address:", market.operator_address);
-  console.log("[placeBet] config.operatorAddress:", config.operatorAddress);
-  console.log("[placeBet] using operatorAddress:", operatorAddress);
-  console.log("[placeBet] user address:", input.userAddress);
-  
+
   if (!operatorAddress) {
     throw new Error("Operator address not configured");
   }
-  
-  // Prevent self-payment (temREDUNDANT error)
-  if (operatorAddress === input.userAddress) {
+
+  if (operatorAddress.toLowerCase() === input.userAddress.toLowerCase()) {
     throw new Error("Cannot place bet: operator address cannot be the same as bettor address");
   }
 
-  const paymentTx = buildOutcomeBetPayment({
-    account: input.userAddress,
-    destination: operatorAddress,
-    amountDrops: input.amountDrops,
-    marketId: input.marketId,
-    outcomeId: input.outcomeId,
-  });
-
-  return {
-    bet,
-    weightScore,
-    effectiveAmountDrops,
-    trustSetTx,
-    paymentTx,
+  // EVM payment transaction: user sends ETH to operator
+  const paymentTx = {
+    from: input.userAddress,
+    to: operatorAddress,
+    value: "0x" + amount.toString(16),
   };
+
+  return { bet, weightScore, effectiveAmountWei, paymentTx };
 }
 
 /**
- * Confirm a bet after payment is validated on ledger.
- * 1. Verify payment tx on XRPL
- * 2. Update pool totals (market + outcome)
- * 3. Queue token minting (via worker)
+ * Confirm a bet after payment tx is submitted on-chain.
  */
 export async function confirmBet(input: ConfirmBetInput): Promise<Bet> {
   const bet = getBetById(input.betId);
-  if (!bet) {
-    throw new Error("Bet not found");
-  }
-  if (bet.status !== "Pending") {
-    throw new Error(`Bet is already ${bet.status}`);
-  }
+  if (!bet) throw new Error("Bet not found");
+  if (bet.status !== "Pending") throw new Error(`Bet is already ${bet.status}`);
 
-  // Check if tx hash is already used
   const existingBet = getBetByPaymentTx(input.paymentTxHash);
-  if (existingBet) {
-    throw new Error("Payment tx already used for another bet");
-  }
+  if (existingBet) throw new Error("Payment tx already used for another bet");
 
   const market = getMarketById(bet.market_id);
-  if (!market) {
-    throw new Error("Market not found");
-  }
+  if (!market) throw new Error("Market not found");
 
-  // Update bet with payment tx
   updateBet(bet.id, {
     status: "Confirmed",
     paymentTx: input.paymentTxHash,
   });
 
-  // Update market pool total
-  const effectiveAmount = bet.effective_amount_drops ?? bet.amount_drops;
+  const effectiveAmount = bet.effective_amount_wei ?? bet.amount_wei;
   addToPoolMultiOutcome(market.id, effectiveAmount);
 
-  // Update outcome total
   if (bet.outcome_id) {
     addToOutcomeTotal(bet.outcome_id, effectiveAmount);
-  }
-
-  // Update escrow tracking (if exists)
-  const escrow = getEscrowByMarket(market.id);
-  if (escrow) {
-    addToEscrow(escrow.id, bet.amount_drops);
-  }
-
-  // Auto-mint position tokens if issuer secret is configured
-  console.log("[confirmBet] Checking issuer secret...", config.issuerSecret ? "SET" : "NOT SET");
-  if (config.issuerSecret) {
-    try {
-      const mintTx = buildMintTx(bet.id);
-      console.log("[confirmBet] mintTx built:", mintTx ? "YES" : "NO");
-      if (mintTx) {
-        console.log("[confirmBet] Auto-minting tokens for bet:", bet.id);
-        const result = await signAndSubmitWithIssuer(mintTx as Payment);
-        updateBet(bet.id, { mintTx: result.hash });
-        console.log("[confirmBet] Mint successful:", result.hash);
-      }
-    } catch (err) {
-      // Log error but don't fail the bet confirmation
-      console.error("[confirmBet] Auto-mint failed:", err);
-      // Bet is still confirmed, tokens can be minted manually later
-    }
-  } else {
-    console.log("[confirmBet] Skipping auto-mint (no XRPL_ISSUER_SECRET)");
   }
 
   return getBetById(bet.id)!;
 }
 
-/**
- * Build token mint transaction for a confirmed bet.
- * Called by worker after bet is confirmed.
- */
-export function buildMintTx(betId: string): unknown | null {
-  const bet = getBetById(betId);
-  if (!bet || bet.status !== "Confirmed" || bet.mint_tx) {
-    return null;
-  }
-
-  // Get user's wallet address (bet.user_id is the DB user ID, not the XRPL address)
-  const user = getUserById(bet.user_id);
-  if (!user) {
-    console.error("[buildMintTx] User not found:", bet.user_id);
-    return null;
-  }
-  const destinationAddress = user.wallet_address;
-  console.log("[buildMintTx] Destination address:", destinationAddress);
-
-  // Multi-outcome: use outcome currency code
-  if (bet.outcome_id) {
-    const outcome = getOutcomeById(bet.outcome_id);
-    if (outcome?.currency_code) {
-      return buildOutcomeMintPayment({
-        issuerAddress: config.issuerAddress,
-        destination: destinationAddress,
-        marketId: bet.market_id,
-        outcomeId: bet.outcome_id,
-        currencyCode: outcome.currency_code,
-        tokenValue: bet.effective_amount_drops ?? bet.amount_drops,
-      });
-    }
-  }
-
-  // Legacy YES/NO fallback
-  return buildMintPayment({
-    issuerAddress: config.issuerAddress,
-    destination: destinationAddress,
-    marketId: bet.market_id,
-    outcome: bet.outcome as BetOutcome,
-    tokenValue: bet.amount_drops,
-  });
-}
-
-/**
- * Mark bet as minted after token tx is confirmed.
- */
-export function markBetMinted(betId: string, mintTxHash: string): Bet | null {
-  return updateBet(betId, { mintTx: mintTxHash });
-}
-
-/**
- * Mark bet as failed.
- */
 export function markBetFailed(betId: string): Bet | null {
   return updateBet(betId, { status: "Failed" });
 }
 
-/**
- * Get a single bet.
- */
 export function getBet(id: string): Bet | null {
   return getBetById(id);
 }
 
-/**
- * Get bets for a market.
- */
 export function getBetsForMarket(marketId: string, status?: string): Bet[] {
   if (status && ["Pending", "Confirmed", "Failed", "Refunded"].includes(status)) {
     return listBetsByMarket(marketId, status as Bet["status"]);
@@ -326,49 +157,36 @@ export function getBetsForMarket(marketId: string, status?: string): Bet[] {
   return listBetsByMarket(marketId);
 }
 
-/**
- * Get bets for a user.
- */
 export function getBetsForUser(userId: string): Bet[] {
   return listBetsByUser(userId);
 }
 
-/**
- * Calculate potential payout for a multi-outcome bet.
- * Uses effective amounts (with weight applied).
- */
 export function calculatePotentialPayout(
   marketId: string,
   outcomeId: string,
-  amountDrops: string,
+  amountWei: string,
   userAddress?: string
 ): { potentialPayout: string; weightScore: number; effectiveAmount: string } {
   const market = getMarketById(marketId);
   if (!market) {
-    return { potentialPayout: "0", weightScore: 1.0, effectiveAmount: amountDrops };
+    return { potentialPayout: "0", weightScore: 1.0, effectiveAmount: amountWei };
   }
 
-  // Calculate weight
   let weightScore = 1.0;
   if (userAddress) {
     const attributes = getAttributesForUser(userAddress);
     weightScore = calculateWeightScore(attributes);
   }
-  const effectiveAmount = Math.round(Number(amountDrops) * weightScore).toString();
+  const effectiveAmount = Math.round(Number(amountWei) * weightScore).toString();
 
-  // Get outcomes for probability calculation
   const outcomes = getOutcomesWithProbability(marketId);
   const targetOutcome = outcomes.find((o) => o.id === outcomeId);
   if (!targetOutcome) {
     return { potentialPayout: "0", weightScore, effectiveAmount };
   }
 
-  // Calculate pool-based payout
-  const totalPool = outcomes.reduce(
-    (sum, o) => sum + BigInt(o.total_amount_drops),
-    0n
-  );
-  const outcomeTotal = BigInt(targetOutcome.total_amount_drops);
+  const totalPool = outcomes.reduce((sum, o) => sum + BigInt(o.total_amount_wei), 0n);
+  const outcomeTotal = BigInt(targetOutcome.total_amount_wei);
   const betEffective = BigInt(effectiveAmount);
 
   const newTotal = totalPool + betEffective;
@@ -382,39 +200,27 @@ export function calculatePotentialPayout(
   return { potentialPayout: payout.toString(), weightScore, effectiveAmount };
 }
 
-/**
- * Calculate actual payout for a resolved market (multi-outcome).
- */
 export function calculateActualPayout(bet: Bet): string {
   const market = getMarketById(bet.market_id);
-  if (!market || market.status !== "Resolved") {
-    return "0";
-  }
+  if (!market || market.status !== "Resolved") return "0";
 
-  // Check if this bet's outcome won
   const resolvedOutcomeId = market.resolved_outcome_id;
   if (!resolvedOutcomeId) {
-    // Legacy YES/NO resolution
-    if (!market.outcome || bet.outcome !== market.outcome) {
-      return "0";
-    }
-    const totalPool = BigInt(market.pool_total_drops);
+    if (!market.outcome || bet.outcome !== market.outcome) return "0";
+    const totalPool = BigInt(market.pool_total_wei);
     const winningTotal = BigInt(
-      market.outcome === "YES" ? market.yes_total_drops : market.no_total_drops
+      market.outcome === "YES" ? market.yes_total_wei : market.no_total_wei
     );
-    const betAmount = BigInt(bet.amount_drops);
+    const betAmount = BigInt(bet.amount_wei);
     if (winningTotal === 0n) return "0";
     return ((totalPool * betAmount) / winningTotal).toString();
   }
 
-  // Multi-outcome resolution
-  if (bet.outcome_id !== resolvedOutcomeId) {
-    return "0";
-  }
+  if (bet.outcome_id !== resolvedOutcomeId) return "0";
 
-  const totalPool = BigInt(market.pool_total_drops);
+  const totalPool = BigInt(market.pool_total_wei);
   const winningTotal = BigInt(getTotalEffectiveAmount(market.id, resolvedOutcomeId));
-  const betEffective = BigInt(bet.effective_amount_drops ?? bet.amount_drops);
+  const betEffective = BigInt(bet.effective_amount_wei ?? bet.amount_wei);
 
   if (winningTotal === 0n) return "0";
   return ((totalPool * betEffective) / winningTotal).toString();

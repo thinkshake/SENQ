@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { formatXrp, type UserBet } from "@/lib/api"
+import { formatEth, type UserBet } from "@/lib/api"
 
 export function ActiveBets({ bets }: { bets: UserBet[] }) {
   if (bets.length === 0) {
@@ -60,7 +60,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
               <div>
                 <span className="text-muted-foreground">ベット額: </span>
                 <span className="font-mono text-foreground">
-                  {formatXrp(bet.amountDrops)}
+                  {formatEth(bet.amountWei)}
                 </span>
               </div>
               {bet.weightScore > 1 && (
@@ -71,11 +71,11 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
                   </span>
                 </div>
               )}
-              {bet.effectiveAmountDrops && bet.effectiveAmountDrops !== bet.amountDrops && (
+              {bet.effectiveAmountWei && bet.effectiveAmountWei !== bet.amountWei && (
                 <div>
                   <span className="text-muted-foreground">実効額: </span>
                   <span className="font-mono text-foreground">
-                    {formatXrp(bet.effectiveAmountDrops)}
+                    {formatEth(bet.effectiveAmountWei)}
                   </span>
                 </div>
               )}

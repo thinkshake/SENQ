@@ -11,26 +11,17 @@ export const config = {
   /** SQLite database path */
   databasePath: process.env.DATABASE_PATH || "./data/mitate.db",
 
-  /** XRPL Testnet JSON-RPC endpoint */
-  xrplRpcUrl: process.env.XRPL_RPC_URL || "https://s.altnet.rippletest.net:51234",
+  /** EVM JSON-RPC endpoint */
+  evmRpcUrl: process.env.EVM_RPC_URL || "http://localhost:8545",
 
-  /** XRPL Testnet WebSocket endpoint */
-  xrplWsUrl: process.env.XRPL_WS_URL || "wss://s.altnet.rippletest.net:51233",
+  /** EVM Chain ID */
+  evmChainId: parseInt(process.env.EVM_CHAIN_ID || "1337", 10),
 
-  /** XRPL Network ID (for validation) */
-  xrplNetworkId: parseInt(process.env.XRPL_NETWORK_ID || "1", 10), // 1 = Testnet
+  /** Market operator EVM address (receives bet payments) */
+  operatorAddress: process.env.EVM_OPERATOR_ADDRESS || "",
 
-  /** Market operator address */
-  operatorAddress: process.env.XRPL_OPERATOR_ADDRESS || "",
-
-  /** Market issuer address */
-  issuerAddress: process.env.XRPL_ISSUER_ADDRESS || "",
-
-  /** Market issuer secret (for auto-minting tokens) */
-  issuerSecret: process.env.XRPL_ISSUER_SECRET || "",
-
-  /** Market operator secret (for auto-payouts) */
-  operatorSecret: process.env.XRPL_OPERATOR_SECRET || "",
+  /** Market operator private key (for auto-payouts) */
+  operatorPrivateKey: process.env.EVM_OPERATOR_PRIVATE_KEY || "",
 
   /** Admin API key for privileged operations */
   adminApiKey: process.env.ADMIN_API_KEY || "",
@@ -44,10 +35,7 @@ export function validateConfig(): string[] {
 
   if (config.nodeEnv === "production") {
     if (!config.operatorAddress) {
-      errors.push("XRPL_OPERATOR_ADDRESS is required in production");
-    }
-    if (!config.issuerAddress) {
-      errors.push("XRPL_ISSUER_ADDRESS is required in production");
+      errors.push("EVM_OPERATOR_ADDRESS is required in production");
     }
     if (!config.adminApiKey) {
       errors.push("ADMIN_API_KEY is required in production");

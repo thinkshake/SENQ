@@ -6,7 +6,6 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import {
   createNewMarket,
-  confirmMarketCreation,
   getMarket,
   getMarketFull,
   getMarkets,
@@ -17,6 +16,7 @@ import {
 } from "../services/markets";
 import { config } from "../config";
 import { getOutcomesWithProbability } from "../db/models/outcomes";
+import { signAndSubmitWithOperator } from "../evm/client";
 
 const markets = new Hono();
 
@@ -36,11 +36,6 @@ const createMarketSchema = z.object({
     .optional(),
 });
 
-const confirmMarketSchema = z.object({
-  escrowTxHash: z.string().min(1),
-  escrowSequence: z.number().int().positive(),
-});
-
 const updateMarketSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().min(1).max(5000).optional(),
@@ -58,9 +53,9 @@ function formatMarketResponse(m: {
   category_label: string | null;
   status: string;
   betting_deadline: string;
-  pool_total_drops: string;
+  pool_total_wei: string;
   created_at: string;
-  outcomes?: { id: string; label: string; probability: number; total_amount_drops: string }[];
+  outcomes?: { id: string; label: string; probability: number; total_amount_wei: string }[];
 }) {
   return {
     id: m.id,
@@ -70,12 +65,12 @@ function formatMarketResponse(m: {
     categoryLabel: m.category_label,
     status: m.status,
     bettingDeadline: m.betting_deadline,
-    totalPoolDrops: m.pool_total_drops,
+    totalPoolWei: m.pool_total_wei,
     outcomes: (m.outcomes ?? []).map((o) => ({
       id: o.id,
       label: o.label,
       probability: o.probability,
-      totalAmountDrops: o.total_amount_drops,
+      totalAmountWei: o.total_amount_wei,
     })),
     createdAt: m.created_at,
   };
@@ -83,22 +78,14 @@ function formatMarketResponse(m: {
 
 // ── Routes ─────────────────────────────────────────────────────────
 
-/**
- * GET /markets - List markets with optional filters
- */
 markets.get("/", async (c) => {
   const status = c.req.query("status");
   const category = c.req.query("category");
   const marketList = getMarkets(status, category);
 
-  return c.json({
-    markets: marketList.map(formatMarketResponse),
-  });
+  return c.json({ markets: marketList.map(formatMarketResponse) });
 });
 
-/**
- * GET /markets/open - List markets available for betting
- */
 markets.get("/open", async (c) => {
   const marketList = getOpenMarketsForBetting();
 
@@ -110,9 +97,6 @@ markets.get("/open", async (c) => {
   });
 });
 
-/**
- * GET /markets/:id - Get market details with outcomes
- */
 markets.get("/:id", async (c) => {
   const id = c.req.param("id");
   const market = getMarketFull(id);
@@ -123,20 +107,17 @@ markets.get("/:id", async (c) => {
 
   return c.json({
     ...formatMarketResponse(market),
-    escrowTxHash: market.xrpl_escrow_tx,
-    escrowSequence: market.xrpl_escrow_sequence,
     resolutionTime: market.resolution_time,
     resolvedOutcomeId: market.resolved_outcome_id,
-    issuerAddress: market.issuer_address,
     operatorAddress: market.operator_address,
   });
 });
 
 /**
- * POST /markets - Create a new market (admin only)
+ * POST /markets - Create a new market (admin only).
+ * Market opens immediately on EVM.
  */
 markets.post("/", zValidator("json", createMarketSchema), async (c) => {
-  // Check admin auth
   const adminKey = c.req.header("X-Admin-Key");
   if (!adminKey || adminKey !== config.adminApiKey) {
     return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
@@ -147,126 +128,11 @@ markets.post("/", zValidator("json", createMarketSchema), async (c) => {
   try {
     const result = await createNewMarket(body, config.operatorAddress);
 
-    return c.json({
-      ...formatMarketResponse(result.market),
-      escrowTx: result.escrowTx,
-    }, 201);
+    return c.json(formatMarketResponse(result.market), 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create market";
     return c.json({ error: { code: "VALIDATION_ERROR", message } }, 400);
   }
-});
-
-/**
- * POST /markets/:id/confirm - Confirm market creation after XRPL tx
- */
-markets.post("/:id/confirm", zValidator("json", confirmMarketSchema), async (c) => {
-  const adminKey = c.req.header("X-Admin-Key");
-  if (!adminKey || adminKey !== config.adminApiKey) {
-    return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
-  }
-
-  const id = c.req.param("id");
-  const body = c.req.valid("json");
-
-  try {
-    const market = await confirmMarketCreation(id, body.escrowTxHash, body.escrowSequence);
-    if (!market) {
-      return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
-    }
-
-    return c.json({
-      data: {
-        id: market.id,
-        status: market.status,
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to confirm market";
-    return c.json({ error: { code: "VALIDATION_ERROR", message } }, 400);
-  }
-});
-
-/**
- * POST /markets/:id/test-open - Open market for testing (skip XRPL escrow)
- * WARNING: For development/demo only. Bypasses real escrow creation.
- */
-markets.post("/:id/test-open", async (c) => {
-  const adminKey = c.req.header("X-Admin-Key");
-  if (!adminKey || adminKey !== config.adminApiKey) {
-    return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
-  }
-
-  const id = c.req.param("id");
-  const market = getMarket(id);
-
-  if (!market) {
-    return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
-  }
-
-  if (market.status !== "Draft") {
-    return c.json({ error: { code: "VALIDATION_ERROR", message: `Cannot open market in ${market.status} status` } }, 400);
-  }
-
-  // Import updateMarket from db model
-  const { updateMarket } = await import("../db/models/markets");
-  
-  // Also set operator/issuer addresses from config if not set
-  const updates: Record<string, unknown> = { status: "Open" };
-  if (!market.operator_address && config.operatorAddress) {
-    updates.operatorAddress = config.operatorAddress;
-  }
-  if (!market.issuer_address && config.issuerAddress) {
-    updates.issuerAddress = config.issuerAddress;
-  }
-  
-  const updated = updateMarket(id, updates);
-
-  return c.json({
-    data: {
-      id: updated?.id,
-      status: updated?.status,
-      operatorAddress: updated?.operator_address,
-      message: "Market opened for testing (no XRPL escrow)",
-    },
-  });
-});
-
-/**
- * POST /markets/:id/fix-operator - Fix operator address for existing market
- * WARNING: For development/demo only.
- */
-markets.post("/:id/fix-operator", async (c) => {
-  const adminKey = c.req.header("X-Admin-Key");
-  if (!adminKey || adminKey !== config.adminApiKey) {
-    return c.json({ error: { code: "AUTH_REQUIRED", message: "Admin authentication required" } }, 401);
-  }
-
-  if (!config.operatorAddress) {
-    return c.json({ error: { code: "VALIDATION_ERROR", message: "XRPL_OPERATOR_ADDRESS not configured" } }, 400);
-  }
-
-  const id = c.req.param("id");
-  const market = getMarket(id);
-
-  if (!market) {
-    return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
-  }
-
-  const { updateMarket } = await import("../db/models/markets");
-  const updated = updateMarket(id, { 
-    operatorAddress: config.operatorAddress,
-    issuerAddress: config.issuerAddress || market.issuer_address,
-  });
-
-  return c.json({
-    data: {
-      id: updated?.id,
-      operatorAddress: updated?.operator_address,
-      issuerAddress: updated?.issuer_address,
-      message: "Operator address updated",
-    },
-  });
 });
 
 /**
@@ -304,7 +170,7 @@ markets.patch("/:id", zValidator("json", updateMarketSchema), async (c) => {
 
 /**
  * POST /markets/:id/resolve - Resolve a market (admin only)
- * Creates payout records and auto-executes payouts if operator secret is set
+ * Creates payout records and auto-executes payouts if operator key is set
  */
 markets.post("/:id/resolve", async (c) => {
   const adminKey = c.req.header("X-Admin-Key");
@@ -323,8 +189,6 @@ markets.post("/:id/resolve", async (c) => {
   const { listConfirmedBetsByOutcomeId, getTotalEffectiveAmount } = await import("../db/models/bets");
   const { createPayout, updatePayout } = await import("../db/models/payouts");
   const { getUserById } = await import("../db/models/users");
-  const { buildOutcomePayoutPayment } = await import("../xrpl/tx-builder");
-  const { signAndSubmitWithOperator } = await import("../xrpl/client");
 
   const market = getMarket(id);
   if (!market) {
@@ -335,7 +199,6 @@ markets.post("/:id/resolve", async (c) => {
     return c.json({ error: { code: "VALIDATION_ERROR", message: `Cannot resolve market in ${market.status} status` } }, 400);
   }
 
-  // Update market status
   const updated = updateMarket(id, {
     status: "Resolved",
     resolvedOutcomeId: body.outcomeId,
@@ -343,54 +206,39 @@ markets.post("/:id/resolve", async (c) => {
 
   console.log("[resolve] Market resolved:", id, "winning outcome:", body.outcomeId);
 
-  // Calculate and execute payouts
   const winningBets = listConfirmedBetsByOutcomeId(id, body.outcomeId);
-  const totalPool = BigInt(market.pool_total_drops);
+  const totalPool = BigInt(market.pool_total_wei);
   const winningTotal = BigInt(getTotalEffectiveAmount(id, body.outcomeId));
-
-  console.log("[resolve] Total pool:", totalPool.toString(), "Winning total:", winningTotal.toString());
-  console.log("[resolve] Winning bets:", winningBets.length);
 
   const payoutResults: { betId: string; userId: string; amount: string; txHash?: string; error?: string }[] = [];
 
   if (winningTotal > 0n && winningBets.length > 0) {
     for (const bet of winningBets) {
-      const betEffective = BigInt(bet.effective_amount_drops ?? bet.amount_drops);
+      const betEffective = BigInt(bet.effective_amount_wei ?? bet.amount_wei);
       const payoutAmount = (totalPool * betEffective) / winningTotal;
 
       if (payoutAmount <= 0n) continue;
 
-      // Get user's wallet address
       const user = getUserById(bet.user_id);
       if (!user) {
         console.error("[resolve] User not found for bet:", bet.id);
         continue;
       }
 
-      // Create payout record
       const payout = createPayout({
         marketId: id,
         userId: bet.user_id,
-        amountDrops: payoutAmount.toString(),
+        amountWei: payoutAmount.toString(),
       });
 
-      console.log("[resolve] Created payout:", payout.id, "amount:", payoutAmount.toString(), "to:", user.wallet_address);
-
-      // Auto-execute payout if operator secret is configured
-      if (config.operatorSecret) {
+      // Auto-execute payout if operator private key is configured
+      if (config.operatorPrivateKey) {
         try {
-          const payoutTx = buildOutcomePayoutPayment({
-            operatorAddress: config.operatorAddress,
-            destination: user.wallet_address,
-            amountDrops: payoutAmount.toString(),
-            marketId: id,
-            outcomeId: body.outcomeId,
-          });
-
-          console.log("[resolve] Executing payout for bet:", bet.id);
-          const result = await signAndSubmitWithOperator(payoutTx as any);
+          const result = await signAndSubmitWithOperator(
+            user.wallet_address as `0x${string}`,
+            payoutAmount
+          );
           updatePayout(payout.id, { status: "Sent", payoutTx: result.hash });
-          console.log("[resolve] Payout successful:", result.hash);
 
           payoutResults.push({
             betId: bet.id,
@@ -409,7 +257,7 @@ markets.post("/:id/resolve", async (c) => {
           });
         }
       } else {
-        console.log("[resolve] Skipping auto-payout (no XRPL_OPERATOR_SECRET)");
+        console.log("[resolve] Skipping auto-payout (no EVM_OPERATOR_PRIVATE_KEY)");
         payoutResults.push({
           betId: bet.id,
           userId: user.wallet_address,
@@ -419,8 +267,7 @@ markets.post("/:id/resolve", async (c) => {
     }
   }
 
-  // Update market to Paid if all payouts sent
-  if (config.operatorSecret && payoutResults.every(p => p.txHash)) {
+  if (config.operatorPrivateKey && payoutResults.every((p) => p.txHash)) {
     updateMarket(id, { status: "Paid" });
   }
 
@@ -455,16 +302,10 @@ markets.post("/:id/close", async (c) => {
     return c.json({ error: { code: "VALIDATION_ERROR", message: `Cannot close market in ${market.status} status` } }, 400);
   }
 
-  // Import updateMarket from db model
   const { updateMarket } = await import("../db/models/markets");
   const updated = updateMarket(id, { status: "Closed" });
 
-  return c.json({
-    data: {
-      id: updated?.id,
-      status: updated?.status,
-    },
-  });
+  return c.json({ data: { id: updated?.id, status: updated?.status } });
 });
 
 export default markets;

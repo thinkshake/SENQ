@@ -1,18 +1,18 @@
 # MITATE 見立て
 
-> XRPL Parimutuel Prediction Market
+> EVM Parimutuel Prediction Market
 
 **Demo Day: February 24, 2026** | [JFIIP Hackathon](https://jfiip.xrpl.org)
 
 ## Overview
 
-MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with XRP, and winners share the entire pool proportionally.
+MITATE is a prediction market DApp built on EVM using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with ETH, and winners share the entire pool proportionally.
 
 ### What Makes MITATE Special?
 
-- **XRPL-Native Design**: Uses 6 XRPL primitives (Escrow, Issued Currency, Trust Line, DEX, Multi-Sign, Memo)
+- **EVM-Native Design**: Uses EVM primitives (ETH transfer, calldata, Multi-Sign)
 - **Parimutuel Pricing**: No complex AMM math — simple pool-based payouts
-- **Verifiable On-Chain**: All bets and outcomes recorded on XRPL ledger
+- **Verifiable On-Chain**: All bets and outcomes recorded on the EVM blockchain
 - **Multi-Sign Resolution**: 2-of-3 governance prevents manipulation
 
 ## Architecture
@@ -31,29 +31,25 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        XRPL Testnet                              │
-│     Escrow │ Issued Currency │ Trust Line │ DEX │ Multi-Sign     │
+│                        EVM Testnet                               │
+│              ETH Transfer │ calldata │ Multi-Sign                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## XRPL Features Used
+## EVM Features Used
 
 | Feature | Usage |
 |---------|-------|
-| **Escrow** | Pool XRP bets with time-locked release |
-| **Issued Currency** | YES/NO outcome tokens per market |
-| **Trust Line** | Users hold outcome tokens |
-| **DEX** | Secondary trading of outcome tokens |
+| **ETH Transfer** | Pool ETH bets and release to winners |
+| **calldata** | On-chain metadata for all transactions |
 | **Multi-Sign** | 2-of-3 resolution governance |
-| **Memo** | On-chain metadata for all transactions |
 
 ## User Flow
 
 1. **Market Created** → Admin creates market with betting deadline
-2. **Bets Placed** → Users bet XRP on YES or NO, receive outcome tokens
-3. **Trading** → Users can trade tokens on XRPL DEX before deadline
-4. **Resolution** → Multi-sign committee resolves outcome
-5. **Payout** → Winners receive proportional share of pool
+2. **Bets Placed** → Users bet ETH on YES or NO
+3. **Resolution** → Multi-sign committee resolves outcome
+4. **Payout** → Winners receive proportional share of pool
 
 ## Tech Stack
 
@@ -61,7 +57,7 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
 |-------|------------|
 | Frontend | Next.js 16, React, Tailwind CSS, shadcn/ui |
 | Backend | Hono, Bun, SQLite (WAL mode) |
-| Blockchain | XRPL Testnet, xrpl.js |
+| Blockchain | EVM Testnet, viem |
 | Deployment | Vercel (frontend), Fly.io (backend) |
 
 ## Development
@@ -70,7 +66,7 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
 
 - [Bun](https://bun.sh) 1.0+
 - Node.js 20+ (for Next.js)
-- XRPL Testnet accounts (operator, issuer)
+- EVM Testnet accounts (operator)
 
 ### Option 1: Docker Compose (Recommended)
 
@@ -81,7 +77,7 @@ cd mitate
 
 # Configure environment
 cp .env.example .env
-# Edit .env with XRPL addresses
+# Edit .env with EVM addresses
 
 # Start all services
 docker-compose up -d
@@ -108,7 +104,7 @@ bun install
 
 # Configure environment
 cp apps/api/.env.example apps/api/.env
-# Edit .env with XRPL addresses and API key
+# Edit .env with EVM addresses and API key
 
 # Run database migrations
 cd apps/api && bun run migrate
@@ -117,26 +113,20 @@ cd apps/api && bun run migrate
 bun run dev  # Starts both frontend and backend
 ```
 
-### Getting XRPL Testnet Accounts
+### Getting EVM Testnet Accounts
 
-You need two XRPL Testnet accounts: **Operator** (holds escrow, receives bets) and **Issuer** (mints tokens).
+You need an EVM Testnet account: **Operator** (holds ETH, receives bets, sends payouts).
 
-1. **Get accounts from the XRPL Testnet Faucet:**
+1. **Get an account from an EVM Testnet Faucet:**
    ```bash
-   # Get Operator account
-   curl -X POST https://faucet.altnet.rippletest.net/accounts
-   # Response: {"account":{"xAddress":"...", "address":"rXXX...", "secret":"sXXX..."}, ...}
-   
-   # Get Issuer account (run again)
-   curl -X POST https://faucet.altnet.rippletest.net/accounts
+   # Use a faucet for your target EVM testnet, e.g. Sepolia:
+   # https://sepoliafaucet.com
+   # Or generate a wallet using viem/cast and fund from a faucet
    ```
-   
-   Or use the web interface: https://xrpl.org/resources/dev-tools/xrp-faucets
 
 2. **Save the addresses:**
-   - `XRPL_OPERATOR_ADDRESS` = first account's `address` (starts with `r`)
-   - `XRPL_ISSUER_ADDRESS` = second account's `address` (starts with `r`)
-   - Keep the `secret` values safe — needed for signing transactions
+   - `EVM_OPERATOR_ADDRESS` = operator wallet address (starts with `0x`)
+   - Keep the private key safe — needed for signing transactions
 
 3. **Generate Admin API Key:**
    ```bash
@@ -151,10 +141,8 @@ You need two XRPL Testnet accounts: **Operator** (holds escrow, receives bets) a
 ```
 PORT=3001
 DATABASE_PATH=./data/mitate.db
-XRPL_RPC_URL=https://s.altnet.rippletest.net:51234
-XRPL_WS_URL=wss://s.altnet.rippletest.net:51233
-XRPL_OPERATOR_ADDRESS=rXXX...    # From faucet step 1
-XRPL_ISSUER_ADDRESS=rYYY...      # From faucet step 1
+EVM_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+EVM_OPERATOR_ADDRESS=0xYourOperatorAddress...
 ADMIN_API_KEY=your-secret-key    # From step 3
 ```
 
@@ -177,7 +165,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 - `GET /api/markets/:id/bets/preview` — Preview payout
 
 ### Trading
-- `POST /api/markets/:id/offers` — Create DEX offer
+- `POST /api/markets/:id/offers` — Create EVM trade
 - `GET /api/markets/:id/trades` — List trades
 
 ### Resolution
@@ -192,8 +180,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```bash
 cd apps/api
 fly launch
-fly secrets set XRPL_OPERATOR_ADDRESS=rXXX...
-fly secrets set XRPL_ISSUER_ADDRESS=rYYY...
+fly secrets set EVM_OPERATOR_ADDRESS=0xXXX...
 fly secrets set ADMIN_API_KEY=your-secret-key
 fly deploy
 ```

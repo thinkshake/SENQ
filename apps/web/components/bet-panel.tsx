@@ -8,9 +8,9 @@ import {
   type Outcome,
   placeBet,
   confirmBet,
-  formatXrp,
-  xrpToDrops,
-  dropsToXrp,
+  formatEth,
+  ethToWei,
+  weiToEth,
 } from "@/lib/api"
 
 type BetPanelProps = {
@@ -19,7 +19,8 @@ type BetPanelProps = {
   onBetPlaced: () => void
 }
 
-const quickAmounts = [1, 5, 10, 50]
+// Quick-select amounts in ETH
+const quickAmounts = [0.001, 0.01, 0.1, 1]
 
 export function BetPanel({
   marketId,
@@ -35,15 +36,15 @@ export function BetPanel({
   const [betConfirmed, setBetConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const balance = wallet.balance ? dropsToXrp(wallet.balance) : null
+  const balance = wallet.balance ? weiToEth(wallet.balance) : null
   const weightScore = user.weightScore
 
   const effectiveAmount = useMemo(
-    () => Math.round(amount * weightScore * 100) / 100,
+    () => Math.round(amount * weightScore * 1e6) / 1e6,
     [amount, weightScore]
   )
 
-  // Only check balance if we have it loaded - don't block on loading balance
+  // Only check balance if we have it loaded
   const insufficientBalance = balance !== null && amount > balance
   const isDisabled = !selectedOutcome || amount <= 0 || !wallet.connected
   const isNotConnected = !wallet.connected
@@ -89,40 +90,22 @@ export function BetPanel({
     setError(null)
 
     try {
-      const amountDrops = xrpToDrops(amount)
+      const amountWei = ethToWei(amount)
       const result = await placeBet(
         marketId,
         selectedOutcome.id,
-        amountDrops,
+        amountWei,
         wallet.address,
       )
 
-      if (result.unsignedTx) {
-        // Step 1: Submit TrustSet first (required for receiving minted tokens)
-        if (result.unsignedTx.trustSet) {
-          console.log("[BetPanel] Submitting TrustSet...")
-          const trustSetResult = await wallet.signAndSubmitTransaction(result.unsignedTx.trustSet)
-          if (!trustSetResult?.hash) {
-            throw new Error("TrustSetトランザクションが拒否されました")
-          }
-          console.log("[BetPanel] TrustSet confirmed:", trustSetResult.hash)
-        }
-
-        // Step 2: Submit Payment transaction
-        const paymentTx = result.unsignedTx.payment
-        if (!paymentTx) {
-          throw new Error("Payment transaction not found")
-        }
-        console.log("[BetPanel] Submitting Payment...")
-        const txResult = await wallet.signAndSubmitTransaction(paymentTx)
-        if (!txResult?.hash) {
-          throw new Error("Paymentトランザクションが拒否されました")
-        }
-        console.log("[BetPanel] Payment confirmed:", txResult.hash)
-
-        // Step 3: Confirm bet (triggers auto-mint on server)
-        await confirmBet(marketId, result.bet.id, txResult.hash)
+      // Submit EVM payment transaction via MetaMask
+      const txResult = await wallet.signAndSubmitTransaction(result.unsignedTx)
+      if (!txResult?.hash) {
+        throw new Error("トランザクションが拒否されました")
       }
+
+      // Confirm bet on server
+      await confirmBet(marketId, result.bet.id, txResult.hash)
 
       setBetConfirmed(true)
       setAmount(0)
@@ -159,13 +142,13 @@ export function BetPanel({
           htmlFor="bet-amount"
           className="block text-xs font-medium text-foreground"
         >
-          ベット金額 (XRP)
+          ベット金額 (ETH)
         </label>
         <input
           id="bet-amount"
           type="number"
           min={0}
-          step={1}
+          step={0.001}
           value={inputValue}
           onChange={(e) => handleAmountChange(e.target.value)}
           placeholder="0"
@@ -186,7 +169,7 @@ export function BetPanel({
                   : "border-border text-foreground hover:border-foreground disabled:cursor-not-allowed disabled:opacity-40"
               )}
             >
-              {q} XRP
+              {q} ETH
             </button>
           ))}
         </div>
@@ -195,7 +178,7 @@ export function BetPanel({
           <p className="mt-2 text-xs text-muted-foreground">
             利用可能:{" "}
             <span className="font-mono">
-              {wallet.balance ? formatXrp(wallet.balance) : "読み込み中..."}
+              {wallet.balance ? formatEth(wallet.balance) : "読み込み中..."}
             </span>
             {insufficientBalance && (
               <span className="ml-2 text-destructive">（残高不足）</span>
@@ -240,7 +223,7 @@ export function BetPanel({
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">ベット金額</span>
             <span className="font-mono text-foreground">
-              {amount} XRP
+              {amount} ETH
             </span>
           </div>
           <div className="mt-1.5 flex items-center justify-between text-sm">
@@ -255,7 +238,7 @@ export function BetPanel({
               実効ベット額
             </span>
             <span className="font-mono text-base font-bold text-foreground">
-              {effectiveAmount} XRP
+              {effectiveAmount} ETH
             </span>
           </div>
         </div>

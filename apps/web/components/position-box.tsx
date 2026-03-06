@@ -1,10 +1,10 @@
-import { formatXrp } from "@/lib/api"
+import { formatEth } from "@/lib/api"
 
 type Position = {
   outcomeLabel: string
-  amountDrops: string
+  amountWei: string
   weightScore: number
-  effectiveAmountDrops: string
+  effectiveAmountWei: string
 }
 
 type PositionBoxProps = {
@@ -31,7 +31,7 @@ export function PositionBox({ positions }: PositionBoxProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">ベット額</span>
                 <span className="font-mono text-foreground">
-                  {formatXrp(pos.amountDrops)}
+                  {formatEth(pos.amountWei)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -43,7 +43,7 @@ export function PositionBox({ positions }: PositionBoxProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">実効ベット額</span>
                 <span className="font-mono font-medium text-foreground">
-                  {formatXrp(pos.effectiveAmountDrops)}
+                  {formatEth(pos.effectiveAmountWei)}
                 </span>
               </div>
             </div>

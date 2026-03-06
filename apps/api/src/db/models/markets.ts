@@ -6,13 +6,13 @@ import { createOutcomesBatch, getOutcomesWithProbability, type Outcome } from ".
 
 // ── Types ──────────────────────────────────────────────────────────
 
-export type MarketStatus = 
-  | "Draft" 
-  | "Open" 
-  | "Closed" 
-  | "Resolved" 
-  | "Paid" 
-  | "Canceled" 
+export type MarketStatus =
+  | "Draft"
+  | "Open"
+  | "Closed"
+  | "Resolved"
+  | "Paid"
+  | "Canceled"
   | "Stalled";
 
 export type MarketOutcome = "YES" | "NO";
@@ -31,15 +31,9 @@ export interface Market {
   resolution_time: string | null;
   created_at: string;
   updated_at: string;
-  xrpl_market_tx: string | null;
-  xrpl_escrow_sequence: number | null;
-  xrpl_escrow_tx: string | null;
-  xrpl_escrow_finish_tx: string | null;
-  xrpl_escrow_cancel_tx: string | null;
-  pool_total_drops: string;
-  yes_total_drops: string;
-  no_total_drops: string;
-  issuer_address: string;
+  pool_total_wei: string;
+  yes_total_wei: string;
+  no_total_wei: string;
   operator_address: string;
 }
 
@@ -55,7 +49,6 @@ export interface MarketInsert {
   createdBy: string;
   bettingDeadline: string;
   resolutionTime?: string;
-  issuerAddress: string;
   operatorAddress: string;
 }
 
@@ -73,23 +66,14 @@ export interface MarketUpdate {
   resolvedOutcomeId?: string;
   bettingDeadline?: string;
   resolutionTime?: string;
-  xrplMarketTx?: string;
-  xrplEscrowSequence?: number;
-  xrplEscrowTx?: string;
-  xrplEscrowFinishTx?: string;
-  xrplEscrowCancelTx?: string;
-  poolTotalDrops?: string;
-  yesTotalDrops?: string;
-  noTotalDrops?: string;
+  poolTotalWei?: string;
+  yesTotalWei?: string;
+  noTotalWei?: string;
   operatorAddress?: string;
-  issuerAddress?: string;
 }
 
 // ── Queries ────────────────────────────────────────────────────────
 
-/**
- * Create a new market.
- */
 export function createMarket(market: MarketInsert): Market {
   const db = getDb();
   const id = generateId("mkt");
@@ -97,8 +81,8 @@ export function createMarket(market: MarketInsert): Market {
   db.query(
     `INSERT INTO markets (
       id, title, description, category, category_label, status, created_by,
-      betting_deadline, resolution_time, issuer_address, operator_address
-    ) VALUES (?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?)`
+      betting_deadline, resolution_time, operator_address
+    ) VALUES (?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?)`
   ).run(
     id,
     market.title,
@@ -108,16 +92,12 @@ export function createMarket(market: MarketInsert): Market {
     market.createdBy,
     market.bettingDeadline,
     market.resolutionTime ?? null,
-    market.issuerAddress,
     market.operatorAddress
   );
 
   return getMarketById(id)!;
 }
 
-/**
- * Create a market with outcomes in a single transaction.
- */
 export function createMarketWithOutcomes(
   market: MarketWithOutcomesInsert
 ): MarketWithOutcomes {
@@ -137,20 +117,13 @@ export function createMarketWithOutcomes(
   }
 }
 
-/**
- * Get a market with its outcomes and calculated probabilities.
- */
 export function getMarketWithOutcomes(id: string): MarketWithOutcomes | null {
   const market = getMarketById(id);
   if (!market) return null;
-
   const outcomes = getOutcomesWithProbability(id);
   return { ...market, outcomes };
 }
 
-/**
- * List all markets with outcomes attached.
- */
 export function listMarketsWithOutcomes(
   filters?: { status?: MarketStatus; category?: string }
 ): MarketWithOutcomes[] {
@@ -178,17 +151,11 @@ export function listMarketsWithOutcomes(
   }));
 }
 
-/**
- * Get a market by ID.
- */
 export function getMarketById(id: string): Market | null {
   const db = getDb();
   return db.query("SELECT * FROM markets WHERE id = ?").get(id) as Market | null;
 }
 
-/**
- * List all markets with optional status filter.
- */
 export function listMarkets(status?: MarketStatus): Market[] {
   const db = getDb();
   if (status) {
@@ -198,107 +165,36 @@ export function listMarkets(status?: MarketStatus): Market[] {
   return db.query("SELECT * FROM markets ORDER BY created_at DESC").all() as Market[];
 }
 
-/**
- * List open markets (for betting).
- */
 export function listOpenMarkets(): Market[] {
   const db = getDb();
   return db.query(
-    `SELECT * FROM markets 
-     WHERE status = 'Open' 
+    `SELECT * FROM markets
+     WHERE status = 'Open'
      AND betting_deadline > strftime('%Y-%m-%dT%H:%M:%fZ','now')
      ORDER BY betting_deadline ASC`
   ).all() as Market[];
 }
 
-/**
- * Update a market.
- */
 export function updateMarket(id: string, update: MarketUpdate): Market | null {
   const db = getDb();
   const sets: string[] = [];
   const values: (string | number | null)[] = [];
 
-  if (update.title !== undefined) {
-    sets.push("title = ?");
-    values.push(update.title);
-  }
-  if (update.description !== undefined) {
-    sets.push("description = ?");
-    values.push(update.description);
-  }
-  if (update.category !== undefined) {
-    sets.push("category = ?");
-    values.push(update.category);
-  }
-  if (update.categoryLabel !== undefined) {
-    sets.push("category_label = ?");
-    values.push(update.categoryLabel);
-  }
-  if (update.status !== undefined) {
-    sets.push("status = ?");
-    values.push(update.status);
-  }
-  if (update.outcome !== undefined) {
-    sets.push("outcome = ?");
-    values.push(update.outcome);
-  }
-  if (update.resolvedOutcomeId !== undefined) {
-    sets.push("resolved_outcome_id = ?");
-    values.push(update.resolvedOutcomeId);
-  }
-  if (update.bettingDeadline !== undefined) {
-    sets.push("betting_deadline = ?");
-    values.push(update.bettingDeadline);
-  }
-  if (update.resolutionTime !== undefined) {
-    sets.push("resolution_time = ?");
-    values.push(update.resolutionTime);
-  }
-  if (update.xrplMarketTx !== undefined) {
-    sets.push("xrpl_market_tx = ?");
-    values.push(update.xrplMarketTx);
-  }
-  if (update.xrplEscrowSequence !== undefined) {
-    sets.push("xrpl_escrow_sequence = ?");
-    values.push(update.xrplEscrowSequence);
-  }
-  if (update.xrplEscrowTx !== undefined) {
-    sets.push("xrpl_escrow_tx = ?");
-    values.push(update.xrplEscrowTx);
-  }
-  if (update.xrplEscrowFinishTx !== undefined) {
-    sets.push("xrpl_escrow_finish_tx = ?");
-    values.push(update.xrplEscrowFinishTx);
-  }
-  if (update.xrplEscrowCancelTx !== undefined) {
-    sets.push("xrpl_escrow_cancel_tx = ?");
-    values.push(update.xrplEscrowCancelTx);
-  }
-  if (update.poolTotalDrops !== undefined) {
-    sets.push("pool_total_drops = ?");
-    values.push(update.poolTotalDrops);
-  }
-  if (update.yesTotalDrops !== undefined) {
-    sets.push("yes_total_drops = ?");
-    values.push(update.yesTotalDrops);
-  }
-  if (update.noTotalDrops !== undefined) {
-    sets.push("no_total_drops = ?");
-    values.push(update.noTotalDrops);
-  }
-  if (update.operatorAddress !== undefined) {
-    sets.push("operator_address = ?");
-    values.push(update.operatorAddress);
-  }
-  if (update.issuerAddress !== undefined) {
-    sets.push("issuer_address = ?");
-    values.push(update.issuerAddress);
-  }
+  if (update.title !== undefined) { sets.push("title = ?"); values.push(update.title); }
+  if (update.description !== undefined) { sets.push("description = ?"); values.push(update.description); }
+  if (update.category !== undefined) { sets.push("category = ?"); values.push(update.category); }
+  if (update.categoryLabel !== undefined) { sets.push("category_label = ?"); values.push(update.categoryLabel); }
+  if (update.status !== undefined) { sets.push("status = ?"); values.push(update.status); }
+  if (update.outcome !== undefined) { sets.push("outcome = ?"); values.push(update.outcome); }
+  if (update.resolvedOutcomeId !== undefined) { sets.push("resolved_outcome_id = ?"); values.push(update.resolvedOutcomeId); }
+  if (update.bettingDeadline !== undefined) { sets.push("betting_deadline = ?"); values.push(update.bettingDeadline); }
+  if (update.resolutionTime !== undefined) { sets.push("resolution_time = ?"); values.push(update.resolutionTime); }
+  if (update.poolTotalWei !== undefined) { sets.push("pool_total_wei = ?"); values.push(update.poolTotalWei); }
+  if (update.yesTotalWei !== undefined) { sets.push("yes_total_wei = ?"); values.push(update.yesTotalWei); }
+  if (update.noTotalWei !== undefined) { sets.push("no_total_wei = ?"); values.push(update.noTotalWei); }
+  if (update.operatorAddress !== undefined) { sets.push("operator_address = ?"); values.push(update.operatorAddress); }
 
-  if (sets.length === 0) {
-    return getMarketById(id);
-  }
+  if (sets.length === 0) return getMarketById(id);
 
   sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')");
   values.push(id);
@@ -307,72 +203,49 @@ export function updateMarket(id: string, update: MarketUpdate): Market | null {
   return getMarketById(id);
 }
 
-/**
- * Update pool total for a multi-outcome bet.
- * Increments the market's pool_total_drops.
- */
-export function addToPoolMultiOutcome(
-  id: string,
-  amountDrops: string
-): void {
+export function addToPoolMultiOutcome(id: string, amountWei: string): void {
   const db = getDb();
   db.query(
     `UPDATE markets SET
-      pool_total_drops = CAST(CAST(pool_total_drops AS INTEGER) + ? AS TEXT),
+      pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
      WHERE id = ?`
-  ).run(amountDrops, id);
+  ).run(amountWei, id);
 }
 
-/**
- * Update pool totals atomically (legacy YES/NO).
- */
-export function addToPool(
-  id: string,
-  outcome: MarketOutcome,
-  amountDrops: string
-): void {
+export function addToPool(id: string, outcome: MarketOutcome, amountWei: string): void {
   const db = getDb();
-  const amount = BigInt(amountDrops);
+  const amount = BigInt(amountWei);
 
   if (outcome === "YES") {
     db.query(
-      `UPDATE markets SET 
-        pool_total_drops = CAST(CAST(pool_total_drops AS INTEGER) + ? AS TEXT),
-        yes_total_drops = CAST(CAST(yes_total_drops AS INTEGER) + ? AS TEXT),
+      `UPDATE markets SET
+        pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
+        yes_total_wei = CAST(CAST(yes_total_wei AS INTEGER) + ? AS TEXT),
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?`
     ).run(amount.toString(), amount.toString(), id);
   } else {
     db.query(
-      `UPDATE markets SET 
-        pool_total_drops = CAST(CAST(pool_total_drops AS INTEGER) + ? AS TEXT),
-        no_total_drops = CAST(CAST(no_total_drops AS INTEGER) + ? AS TEXT),
+      `UPDATE markets SET
+        pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
+        no_total_wei = CAST(CAST(no_total_wei AS INTEGER) + ? AS TEXT),
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?`
     ).run(amount.toString(), amount.toString(), id);
   }
 }
 
-/**
- * Check if betting is still allowed for a market.
- */
 export function canPlaceBet(market: Market): boolean {
-  if (market.status !== "Open") {
-    return false;
-  }
-  const deadline = new Date(market.betting_deadline);
-  return deadline > new Date();
+  if (market.status !== "Open") return false;
+  return new Date(market.betting_deadline) > new Date();
 }
 
-/**
- * Get markets that have passed their deadline but are still Open.
- */
 export function getMarketsToClose(): Market[] {
   const db = getDb();
   return db.query(
-    `SELECT * FROM markets 
-     WHERE status = 'Open' 
+    `SELECT * FROM markets
+     WHERE status = 'Open'
      AND betting_deadline <= strftime('%Y-%m-%dT%H:%M:%fZ','now')`
   ).all() as Market[];
 }

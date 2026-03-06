@@ -10,7 +10,7 @@ export interface Outcome {
   id: string;
   label: string;
   probability: number;
-  totalAmountDrops: string;
+  totalAmountWei: string;
 }
 
 export interface Market {
@@ -22,12 +22,9 @@ export interface Market {
   status: "Draft" | "Open" | "Closed" | "Resolved" | "Paid" | "Canceled" | "Stalled";
   bettingDeadline: string;
   resolutionTime: string | null;
-  totalPoolDrops: string;
+  totalPoolWei: string;
   outcomes: Outcome[];
   resolvedOutcomeId: string | null;
-  escrowTxHash: string | null;
-  escrowSequence: number | null;
-  issuerAddress?: string;
   createdAt: string;
 }
 
@@ -37,9 +34,9 @@ export interface Bet {
   outcomeId: string;
   outcomeLabel: string;
   bettorAddress: string;
-  amountDrops: string;
+  amountWei: string;
   weightScore: number;
-  effectiveAmountDrops: string;
+  effectiveAmountWei: string;
   txHash: string | null;
   createdAt: string;
 }
@@ -68,7 +65,7 @@ export interface Payout {
   id: string;
   marketId: string;
   marketTitle?: string;
-  amountDrops: string;
+  amountWei: string;
   status: "Pending" | "Sent" | "Failed";
   payoutTx: string | null;
   createdAt: string;
@@ -80,7 +77,7 @@ export interface Trade {
   takerGets: string;
   takerPays: string;
   executedAt: string;
-  ledgerIndex: number;
+  blockNumber: number;
 }
 
 export interface ApiError {
@@ -143,22 +140,23 @@ export async function getMarket(id: string): Promise<Market> {
 export interface PlaceBetResponse {
   bet: Bet;
   weightScore: number;
-  effectiveAmountDrops: string;
+  effectiveAmountWei: string;
   unsignedTx: {
-    trustSet?: unknown;
-    payment: unknown;
+    from: string;
+    to: string;
+    value: string;
   };
 }
 
 export async function placeBet(
   marketId: string,
   outcomeId: string,
-  amountDrops: string,
+  amountWei: string,
   bettorAddress: string,
 ): Promise<PlaceBetResponse> {
   return apiFetch<PlaceBetResponse>(`/markets/${marketId}/bets`, {
     method: "POST",
-    body: JSON.stringify({ outcomeId, amountDrops, bettorAddress }),
+    body: JSON.stringify({ outcomeId, amountWei, bettorAddress }),
   });
 }
 
@@ -192,12 +190,12 @@ export interface BetPreview {
 export async function previewBet(
   marketId: string,
   outcomeId: string,
-  amountDrops: string,
+  amountWei: string,
   bettorAddress?: string,
 ): Promise<BetPreview> {
   const params = new URLSearchParams({
     outcomeId,
-    amountDrops,
+    amountWei,
   });
   if (bettorAddress) params.set("bettorAddress", bettorAddress);
 
@@ -238,7 +236,7 @@ export async function removeUserAttribute(
 export async function fetchUserBets(
   address: string,
   status?: string,
-): Promise<{ bets: UserBet[]; totalBets: number; totalAmountDrops: string }> {
+): Promise<{ bets: UserBet[]; totalBets: number; totalAmountWei: string }> {
   const query = status ? `?status=${status}` : "";
   return apiFetch(`/users/${address}/bets${query}`);
 }
@@ -255,7 +253,7 @@ export interface TradesResponse {
   trades: Trade[];
   stats: {
     tradeCount: number;
-    volumeDrops: string;
+    volumeWei: string;
   };
 }
 
@@ -274,8 +272,8 @@ export async function getPayoutsForMarket(marketId: string): Promise<{
     pending: number;
     sent: number;
     failed: number;
-    totalDrops: string;
-    sentDrops: string;
+    totalWei: string;
+    sentWei: string;
   };
 }> {
   return apiFetch(`/markets/${marketId}/payouts`);
@@ -298,18 +296,6 @@ export async function adminGetMarkets(adminKey: string): Promise<Market[]> {
   return Array.isArray(result) ? result : result.markets;
 }
 
-export interface CreateMarketResponse extends Market {
-  escrowTx: {
-    TransactionType: "EscrowCreate";
-    Account: string;
-    Destination: string;
-    Amount: string;
-    CancelAfter: number;
-    DestinationTag?: number;
-    Memos?: unknown[];
-  };
-}
-
 export async function adminCreateMarket(
   adminKey: string,
   body: {
@@ -320,34 +306,11 @@ export async function adminCreateMarket(
     bettingDeadline: string;
     outcomes: { label: string }[];
   },
-): Promise<CreateMarketResponse> {
-  return apiFetch<CreateMarketResponse>("/markets", {
+): Promise<Market> {
+  return apiFetch<Market>("/markets", {
     method: "POST",
     headers: adminHeaders(adminKey),
     body: JSON.stringify(body),
-  });
-}
-
-export async function adminConfirmMarket(
-  adminKey: string,
-  marketId: string,
-  escrowTxHash: string,
-  escrowSequence: number,
-): Promise<{ id: string; status: string }> {
-  return apiFetch(`/markets/${marketId}/confirm`, {
-    method: "POST",
-    headers: adminHeaders(adminKey),
-    body: JSON.stringify({ escrowTxHash, escrowSequence }),
-  });
-}
-
-export async function adminTestOpen(
-  adminKey: string,
-  marketId: string,
-): Promise<{ id: string; status: string; message: string }> {
-  return apiFetch(`/markets/${marketId}/test-open`, {
-    method: "POST",
-    headers: adminHeaders(adminKey),
   });
 }
 
@@ -375,23 +338,27 @@ export async function adminResolveMarket(
 
 // ── Formatting Helpers ─────────────────────────────────────────────
 
-export function dropsToXrp(drops: string | number): number {
-  return Number(drops) / 1_000_000;
+export function weiToEth(wei: string | number): number {
+  return Number(wei) / 1e18;
 }
 
-export function xrpToDrops(xrp: number): string {
-  return Math.floor(xrp * 1_000_000).toString();
+export function ethToWei(eth: number): string {
+  return Math.floor(eth * 1e18).toString();
 }
 
-export function formatXrp(drops: string | number): string {
-  const xrp = dropsToXrp(drops);
-  return `${xrp.toLocaleString("ja-JP")} XRP`;
+export function formatEth(wei: string | number): string {
+  const eth = weiToEth(wei);
+  if (eth === 0) return "0 ETH";
+  if (eth < 0.0001) return `${eth.toExponential(2)} ETH`;
+  return `${eth.toLocaleString("ja-JP", { maximumFractionDigits: 6 })} ETH`;
 }
 
-export function formatXrpCompact(drops: string | number): string {
-  const xrp = dropsToXrp(drops);
-  if (xrp >= 1000) return `${(xrp / 1000).toFixed(1)}K XRP`;
-  return `${xrp.toFixed(0)} XRP`;
+export function formatEthCompact(wei: string | number): string {
+  const eth = weiToEth(wei);
+  if (eth >= 1000) return `${(eth / 1000).toFixed(1)}K ETH`;
+  if (eth >= 1) return `${eth.toFixed(4)} ETH`;
+  if (eth >= 0.001) return `${eth.toFixed(6)} ETH`;
+  return `${eth.toExponential(2)} ETH`;
 }
 
 export function formatDeadline(deadline: string): string {

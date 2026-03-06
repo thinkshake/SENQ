@@ -1,6 +1,6 @@
 /**
  * DB model for the payouts table.
- * Tracks XRP payouts to winning bettors.
+ * Tracks ETH payouts to winning bettors.
  */
 import { getDb, generateId } from "../index";
 
@@ -12,7 +12,7 @@ export interface Payout {
   id: string;
   market_id: string;
   user_id: string;
-  amount_drops: string;
+  amount_wei: string;
   status: PayoutStatus;
   payout_tx: string | null;
   created_at: string;
@@ -22,7 +22,7 @@ export interface Payout {
 export interface PayoutInsert {
   marketId: string;
   userId: string;
-  amountDrops: string;
+  amountWei: string;
 }
 
 export interface PayoutUpdate {
@@ -32,53 +32,41 @@ export interface PayoutUpdate {
 
 // ── Queries ────────────────────────────────────────────────────────
 
-/**
- * Create a new payout record.
- */
 export function createPayout(payout: PayoutInsert): Payout {
   const db = getDb();
   const id = generateId("pay");
-  
+
   db.query(
-    `INSERT INTO payouts (id, market_id, user_id, amount_drops, status)
+    `INSERT INTO payouts (id, market_id, user_id, amount_wei, status)
      VALUES (?, ?, ?, ?, 'Pending')`
-  ).run(id, payout.marketId, payout.userId, payout.amountDrops);
+  ).run(id, payout.marketId, payout.userId, payout.amountWei);
 
   return getPayoutById(id)!;
 }
 
-/**
- * Create multiple payouts in a batch.
- */
 export function createPayoutsBatch(payouts: PayoutInsert[]): Payout[] {
   const db = getDb();
   const results: Payout[] = [];
-  
+
   const stmt = db.query(
-    `INSERT INTO payouts (id, market_id, user_id, amount_drops, status)
+    `INSERT INTO payouts (id, market_id, user_id, amount_wei, status)
      VALUES (?, ?, ?, ?, 'Pending')`
   );
 
   for (const payout of payouts) {
     const id = generateId("pay");
-    stmt.run(id, payout.marketId, payout.userId, payout.amountDrops);
+    stmt.run(id, payout.marketId, payout.userId, payout.amountWei);
     results.push(getPayoutById(id)!);
   }
 
   return results;
 }
 
-/**
- * Get a payout by ID.
- */
 export function getPayoutById(id: string): Payout | null {
   const db = getDb();
   return db.query("SELECT * FROM payouts WHERE id = ?").get(id) as Payout | null;
 }
 
-/**
- * List payouts for a market.
- */
 export function listPayoutsByMarket(marketId: string, status?: PayoutStatus): Payout[] {
   const db = getDb();
   if (status) {
@@ -91,9 +79,6 @@ export function listPayoutsByMarket(marketId: string, status?: PayoutStatus): Pa
   ).all(marketId) as Payout[];
 }
 
-/**
- * List payouts for a user.
- */
 export function listPayoutsByUser(userId: string): Payout[] {
   const db = getDb();
   return db.query(
@@ -101,36 +86,22 @@ export function listPayoutsByUser(userId: string): Payout[] {
   ).all(userId) as Payout[];
 }
 
-/**
- * Get pending payouts for a market (for batch execution).
- */
-export function getPendingPayouts(marketId: string, limit: number = 50): Payout[] {
+export function getPendingPayouts(marketId: string, limit = 50): Payout[] {
   const db = getDb();
   return db.query(
-    "SELECT * FROM payouts WHERE market_id = ? AND status = 'Pending' ORDER BY amount_drops DESC LIMIT ?"
+    "SELECT * FROM payouts WHERE market_id = ? AND status = 'Pending' ORDER BY amount_wei DESC LIMIT ?"
   ).all(marketId, limit) as Payout[];
 }
 
-/**
- * Update a payout.
- */
 export function updatePayout(id: string, update: PayoutUpdate): Payout | null {
   const db = getDb();
   const sets: string[] = [];
   const values: (string | number | null)[] = [];
 
-  if (update.status !== undefined) {
-    sets.push("status = ?");
-    values.push(update.status);
-  }
-  if (update.payoutTx !== undefined) {
-    sets.push("payout_tx = ?");
-    values.push(update.payoutTx);
-  }
+  if (update.status !== undefined) { sets.push("status = ?"); values.push(update.status); }
+  if (update.payoutTx !== undefined) { sets.push("payout_tx = ?"); values.push(update.payoutTx); }
 
-  if (sets.length === 0) {
-    return getPayoutById(id);
-  }
+  if (sets.length === 0) return getPayoutById(id);
 
   sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')");
   values.push(id);
@@ -139,34 +110,31 @@ export function updatePayout(id: string, update: PayoutUpdate): Payout | null {
   return getPayoutById(id);
 }
 
-/**
- * Get payout stats for a market.
- */
 export function getPayoutStats(marketId: string): {
   total: number;
   pending: number;
   sent: number;
   failed: number;
-  totalDrops: string;
-  sentDrops: string;
+  totalWei: string;
+  sentWei: string;
 } {
   const db = getDb();
   const result = db.query(
-    `SELECT 
+    `SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
       SUM(CASE WHEN status = 'Sent' THEN 1 ELSE 0 END) as sent,
       SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed,
-      COALESCE(SUM(CAST(amount_drops AS INTEGER)), 0) as total_drops,
-      COALESCE(SUM(CASE WHEN status = 'Sent' THEN CAST(amount_drops AS INTEGER) ELSE 0 END), 0) as sent_drops
+      COALESCE(SUM(CAST(amount_wei AS INTEGER)), 0) as total_wei,
+      COALESCE(SUM(CASE WHEN status = 'Sent' THEN CAST(amount_wei AS INTEGER) ELSE 0 END), 0) as sent_wei
      FROM payouts WHERE market_id = ?`
   ).get(marketId) as {
     total: number;
     pending: number;
     sent: number;
     failed: number;
-    total_drops: number;
-    sent_drops: number;
+    total_wei: number;
+    sent_wei: number;
   };
 
   return {
@@ -174,14 +142,11 @@ export function getPayoutStats(marketId: string): {
     pending: result.pending,
     sent: result.sent,
     failed: result.failed,
-    totalDrops: result.total_drops.toString(),
-    sentDrops: result.sent_drops.toString(),
+    totalWei: result.total_wei.toString(),
+    sentWei: result.sent_wei.toString(),
   };
 }
 
-/**
- * Check if user already has a payout for this market.
- */
 export function payoutExistsForUser(marketId: string, userId: string): boolean {
   const db = getDb();
   const result = db.query(

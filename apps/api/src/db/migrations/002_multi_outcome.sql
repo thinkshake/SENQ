@@ -1,4 +1,4 @@
--- MITATE Multi-Outcome Migration
+-- MITATE Multi-Outcome Migration (EVM)
 -- Adds multi-outcome markets, user attributes, and weighted betting
 
 -- ── Markets: add category_label and resolved_outcome_id ────────────
@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
   id TEXT PRIMARY KEY,
   market_id TEXT NOT NULL,
   label TEXT NOT NULL,
-  currency_code TEXT,
-  total_amount_drops TEXT NOT NULL DEFAULT '0',
+  total_amount_wei TEXT NOT NULL DEFAULT '0',
   display_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   FOREIGN KEY (market_id) REFERENCES markets(id)
@@ -36,13 +35,13 @@ CREATE TABLE IF NOT EXISTS user_attributes (
 
 CREATE INDEX IF NOT EXISTS idx_user_attributes_wallet ON user_attributes(wallet_address);
 
--- ── Bets: add outcome_id, weight_score, effective_amount_drops ────
+-- ── Bets: add outcome_id, weight_score, effective_amount_wei ──────
 
 ALTER TABLE bets ADD COLUMN outcome_id TEXT REFERENCES outcomes(id);
 ALTER TABLE bets ADD COLUMN weight_score REAL NOT NULL DEFAULT 1.0;
-ALTER TABLE bets ADD COLUMN effective_amount_drops TEXT;
+ALTER TABLE bets ADD COLUMN effective_amount_wei TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_bets_outcome ON bets(outcome_id);
 
--- ── Backfill: set effective_amount_drops = amount_drops for existing bets
-UPDATE bets SET effective_amount_drops = amount_drops WHERE effective_amount_drops IS NULL;
+-- ── Backfill: set effective_amount_wei = amount_wei for existing bets
+UPDATE bets SET effective_amount_wei = amount_wei WHERE effective_amount_wei IS NULL;

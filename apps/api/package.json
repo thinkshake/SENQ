@@ -13,7 +13,7 @@
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.7.0",
-    "xrpl": "^4.2.0",
+    "viem": "^2.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

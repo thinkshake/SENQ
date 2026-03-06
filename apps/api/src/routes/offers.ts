@@ -20,7 +20,7 @@ const createOfferSchema = z.object({
   outcome: z.enum(["YES", "NO"]),
   side: z.enum(["buy", "sell"]),
   tokenAmount: z.string().regex(/^\d+(\.\d+)?$/, "Token amount must be numeric"),
-  xrpAmountDrops: z.string().regex(/^\d+$/, "XRP amount must be positive integer"),
+  ethAmountWei: z.string().regex(/^\d+$/, "ETH amount must be positive integer"),
   userAddress: z.string().min(1),
 });
 
@@ -28,7 +28,7 @@ const createOfferSchema = z.object({
 
 /**
  * POST /markets/:marketId/offers - Create offer intent
- * Returns XRPL OfferCreate tx payload
+ * Returns EVM tx payload for signing
  */
 offers.post("/markets/:marketId/offers", zValidator("json", createOfferSchema), async (c) => {
   const marketId = c.req.param("marketId");
@@ -46,7 +46,7 @@ offers.post("/markets/:marketId/offers", zValidator("json", createOfferSchema), 
       outcome: body.outcome,
       side: body.side,
       tokenAmount: body.tokenAmount,
-      xrpAmountDrops: body.xrpAmountDrops,
+      ethAmountWei: body.ethAmountWei,
     });
 
     return c.json({
@@ -82,11 +82,11 @@ offers.get("/markets/:marketId/trades", async (c) => {
         takerGets: t.taker_gets,
         takerPays: t.taker_pays,
         executedAt: t.executed_at,
-        ledgerIndex: t.ledger_index,
+        blockNumber: t.block_number,
       })),
       stats: {
         tradeCount: stats.count,
-        volumeDrops: stats.volumeDrops,
+        volumeWei: stats.volumeWei,
       },
     },
   });
@@ -111,7 +111,7 @@ offers.get("/trades/:id", async (c) => {
       takerGets: trade.taker_gets,
       takerPays: trade.taker_pays,
       executedAt: trade.executed_at,
-      ledgerIndex: trade.ledger_index,
+      blockNumber: trade.block_number,
     },
   });
 });

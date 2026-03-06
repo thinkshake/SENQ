@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWallet } from "@/contexts/WalletContext";
-import { formatXrp } from "@/lib/api";
+import { formatEth } from "@/lib/api";
 
 export function Header() {
   const wallet = useWallet();
@@ -68,27 +68,18 @@ export function Header() {
                   <span>{formatAddress(wallet.address || "")}</span>
                   {wallet.balance && (
                     <span className="text-xs text-muted-foreground">
-                      {formatXrp(wallet.balance)}
+                      {formatEth(wallet.balance)}
                     </span>
                   )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem className="text-muted-foreground text-xs">
-                  GemWallet • {wallet.network}
+                  MetaMask • Chain {wallet.network}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/portfolio">マイページ</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <a
-                    href={`https://testnet.xrpl.org/accounts/${wallet.address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    XRPL Explorerで見る →
-                  </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -127,14 +118,14 @@ export function Header() {
                   </svg>
                   接続中...
                 </>
-              ) : !wallet.gemWalletInstalled ? (
+              ) : !wallet.metaMaskInstalled ? (
                 <a
-                  href="https://gemwallet.app"
+                  href="https://metamask.io"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center"
                 >
-                  GemWalletをインストール
+                  MetaMaskをインストール
                 </a>
               ) : (
                 "ウォレット接続"

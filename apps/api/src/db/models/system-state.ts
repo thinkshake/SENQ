@@ -1,7 +1,7 @@
 /**
  * DB model for the system_state key-value table.
  *
- * Used to persist sync cursors (e.g. last_ledger_index) and other
+ * Used to persist sync cursors (e.g. last_block_number) and other
  * runtime configuration that must survive restarts.
  */
 import { getDb } from "../index";
