@@ -187,25 +187,33 @@ cast block-number --rpc-url http://127.0.0.1:8545
 
 ---
 
-### Option 2: Docker Compose
+### Option 2: Docker Compose (includes Anvil)
+
+Anvil is included as a service in `docker-compose.yml` — no separate install needed.
 
 ```bash
 git clone https://github.com/thinkshake/mitate.git
 cd mitate
 
-# Configure environment
-cp .env.example .env
-# Edit .env with EVM addresses
+# Configure the API environment (Anvil keys pre-filled)
+cp apps/api/.env.example apps/api/.env
+# EVM_RPC_URL and EVM_CHAIN_ID are overridden by docker-compose automatically
 
-# Start all services
+# Start everything (Anvil → API → Web)
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:3001 |
+| Anvil RPC | http://localhost:8545 |
+
+> The API container connects to Anvil via the internal Docker network (`http://anvil:8545`).
+> Anvil is exposed on your host at `http://localhost:8545` for tools like `cast` or MetaMask.
 
 ### Option 3: Manual Local (EVM Testnet)
 
