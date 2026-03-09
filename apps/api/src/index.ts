@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { config, validateConfig } from "./config";
 import { initDatabase, closeDatabase } from "./db";
-import { createXrplClient, closeXrplClient, getXrplHealth } from "./xrpl/client";
 import healthRoutes from "./routes/health";
 import marketsRoutes from "./routes/markets";
 import betsRoutes from "./routes/bets";
@@ -39,7 +38,7 @@ app.get("/", (c) => {
   return c.json({
     name: "MITATE API",
     version: "0.1.0",
-    description: "XRPL Parimutuel Prediction Market API",
+    description: "EVM Parimutuel Prediction Market API",
   });
 });
 
@@ -61,7 +60,6 @@ app.onError((err, c) => {
 async function start() {
   console.log("Starting MITATE API...");
 
-  // Validate configuration
   const configErrors = validateConfig();
   if (configErrors.length > 0) {
     console.error("Configuration errors:");
@@ -71,7 +69,6 @@ async function start() {
     }
   }
 
-  // Initialize database
   try {
     await initDatabase();
     console.log("Database initialized");
@@ -80,22 +77,11 @@ async function start() {
     process.exit(1);
   }
 
-  // Initialize XRPL client
-  try {
-    await createXrplClient();
-    console.log("XRPL client initialized");
-  } catch (err) {
-    console.error("Failed to initialize XRPL client:", err);
-    // Don't exit - allow startup without XRPL for development
-  }
-
   console.log(`MITATE API listening on port ${config.port}`);
 }
 
-// Graceful shutdown
-async function shutdown() {
+function shutdown() {
   console.log("Shutting down...");
-  await closeXrplClient();
   closeDatabase();
   process.exit(0);
 }
@@ -103,7 +89,6 @@ async function shutdown() {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-// Start the server
 start();
 
 export default {

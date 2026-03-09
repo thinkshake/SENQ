@@ -22,7 +22,7 @@ const bets = new Hono();
 
 const placeBetSchema = z.object({
   outcomeId: z.string().min(1),
-  amountDrops: z.string().regex(/^\d+$/, "Amount must be positive integer string"),
+  amountWei: z.string().regex(/^\d+$/, "Amount must be positive integer string"),
   bettorAddress: z.string().min(1),
 });
 
@@ -34,7 +34,7 @@ const confirmBetSchema = z.object({
 
 /**
  * POST /markets/:marketId/bets - Create bet intent
- * Returns XRPL tx payloads for TrustSet and Payment
+ * Returns EVM payment tx for the user to sign and submit
  */
 bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (c) => {
   const marketId = c.req.param("marketId");
@@ -50,7 +50,7 @@ bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (
     const result = placeBet({
       marketId,
       outcomeId: body.outcomeId,
-      amountDrops: body.amountDrops,
+      amountWei: body.amountWei,
       userAddress: body.bettorAddress,
     });
 
@@ -59,15 +59,12 @@ bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (
         id: result.bet.id,
         marketId: result.bet.market_id,
         outcomeId: result.bet.outcome_id,
-        amountDrops: result.bet.amount_drops,
+        amountWei: result.bet.amount_wei,
         status: result.bet.status,
       },
       weightScore: result.weightScore,
-      effectiveAmountDrops: result.effectiveAmountDrops,
-      unsignedTx: {
-        trustSet: result.trustSetTx,
-        payment: result.paymentTx,
-      },
+      effectiveAmountWei: result.effectiveAmountWei,
+      unsignedTx: result.paymentTx,
     }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create bet";
@@ -82,7 +79,7 @@ bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (
 });
 
 /**
- * POST /markets/:marketId/bets/:betId/confirm - Confirm bet after XRPL transaction
+ * POST /markets/:marketId/bets/:betId/confirm - Confirm bet after EVM transaction
  */
 bets.post("/markets/:marketId/bets/:betId/confirm", zValidator("json", confirmBetSchema), async (c) => {
   console.log("[confirmBet route] Request received");
@@ -141,9 +138,9 @@ bets.get("/markets/:marketId/bets", async (c) => {
         outcomeId: bet.outcome_id,
         outcomeLabel: outcome?.label ?? bet.outcome,
         bettorAddress: bet.user_id,
-        amountDrops: bet.amount_drops,
+        amountWei: bet.amount_wei,
         weightScore: bet.weight_score,
-        effectiveAmountDrops: bet.effective_amount_drops,
+        effectiveAmountWei: bet.effective_amount_wei,
         txHash: bet.payment_tx,
         status: bet.status,
         createdAt: bet.placed_at,
@@ -177,13 +174,12 @@ bets.get("/bets/:id", async (c) => {
       marketId: bet.market_id,
       outcomeId: bet.outcome_id,
       outcomeLabel: outcome?.label ?? bet.outcome,
-      amountDrops: bet.amount_drops,
+      amountWei: bet.amount_wei,
       weightScore: bet.weight_score,
-      effectiveAmountDrops: bet.effective_amount_drops,
+      effectiveAmountWei: bet.effective_amount_wei,
       status: bet.status,
       createdAt: bet.placed_at,
       paymentTx: bet.payment_tx,
-      mintTx: bet.mint_tx,
       payout,
     },
   });
@@ -211,9 +207,9 @@ bets.get("/users/:address/bets", async (c) => {
       marketTitle: market?.title,
       outcomeId: bet.outcome_id,
       outcomeLabel: outcome?.label ?? bet.outcome,
-      amountDrops: bet.amount_drops,
+      amountWei: bet.amount_wei,
       weightScore: bet.weight_score,
-      effectiveAmountDrops: bet.effective_amount_drops,
+      effectiveAmountWei: bet.effective_amount_wei,
       status: bet.status,
       createdAt: bet.placed_at,
       payout,
@@ -221,15 +217,15 @@ bets.get("/users/:address/bets", async (c) => {
   });
 
   const totalBets = betsData.length;
-  const totalAmountDrops = betList.reduce(
-    (sum, b) => sum + BigInt(b.amount_drops),
+  const totalAmountWei = betList.reduce(
+    (sum, b) => sum + BigInt(b.amount_wei),
     0n
   ).toString();
 
   return c.json({
     bets: betsData,
     totalBets,
-    totalAmountDrops,
+    totalAmountWei,
   });
 });
 
@@ -239,14 +235,14 @@ bets.get("/users/:address/bets", async (c) => {
 bets.get("/markets/:marketId/preview", async (c) => {
   const marketId = c.req.param("marketId");
   const outcomeId = c.req.query("outcomeId");
-  const amountDrops = c.req.query("amountDrops");
+  const amountWei = c.req.query("amountWei");
   const bettorAddress = c.req.query("bettorAddress");
 
   if (!outcomeId) {
     return c.json({ error: { code: "VALIDATION_ERROR", message: "outcomeId is required" } }, 400);
   }
-  if (!amountDrops || !/^\d+$/.test(amountDrops)) {
-    return c.json({ error: { code: "INVALID_AMOUNT", message: "amountDrops must be positive integer" } }, 400);
+  if (!amountWei || !/^\d+$/.test(amountWei)) {
+    return c.json({ error: { code: "INVALID_AMOUNT", message: "amountWei must be positive integer" } }, 400);
   }
 
   const market = getMarket(marketId);
@@ -254,11 +250,11 @@ bets.get("/markets/:marketId/preview", async (c) => {
     return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
   }
 
-  const result = calculatePotentialPayout(marketId, outcomeId, amountDrops, bettorAddress);
+  const result = calculatePotentialPayout(marketId, outcomeId, amountWei, bettorAddress);
 
   // Calculate implied odds
-  const impliedOdds = Number(amountDrops) > 0
-    ? (Number(result.potentialPayout) / Number(amountDrops)).toFixed(4)
+  const impliedOdds = Number(amountWei) > 0
+    ? (Number(result.potentialPayout) / Number(amountWei)).toFixed(4)
     : "0";
 
   return c.json({

@@ -49,7 +49,7 @@ export default function RootLayout({
                     <div className="mx-auto max-w-6xl px-4 lg:px-6">
                       <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
                         <span className="font-mono tracking-widest">MITATE</span>
-                        <span>© 2026 MITATE. XRPL Parimutuel Prediction Market.</span>
+                        <span>© 2026 MITATE. EVM Parimutuel Prediction Market.</span>
                       </div>
                     </div>
                   </footer>

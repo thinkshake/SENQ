@@ -29,12 +29,12 @@ export default function MyPage() {
   }
 
   const bets = user.bets
-  const totalBetDrops = bets
-    .reduce((sum, b) => sum + BigInt(b.amountDrops), BigInt(0))
+  const totalBetWei = bets
+    .reduce((sum, b) => sum + BigInt(b.amountWei), BigInt(0))
     .toString()
-  const totalEffectiveDrops = bets
+  const totalEffectiveWei = bets
     .reduce(
-      (sum, b) => sum + BigInt(b.effectiveAmountDrops || b.amountDrops),
+      (sum, b) => sum + BigInt(b.effectiveAmountWei || b.amountWei),
       BigInt(0),
     )
     .toString()
@@ -54,8 +54,8 @@ export default function MyPage() {
             balance={wallet.balance}
             weightScore={user.weightScore}
             betCount={bets.length}
-            totalBetDrops={totalBetDrops}
-            totalEffectiveDrops={totalEffectiveDrops}
+            totalBetWei={totalBetWei}
+            totalEffectiveWei={totalEffectiveWei}
             onDisconnect={wallet.disconnect}
           />
 

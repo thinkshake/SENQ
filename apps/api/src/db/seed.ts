@@ -10,8 +10,7 @@ import { addAttribute } from "./models/user-attributes";
 
 // ── Demo data (from apps/mock/lib/markets-data.ts, XRP amounts) ───
 
-const DEMO_ISSUER = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"; // genesis testnet
-const DEMO_OPERATOR = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
+const DEMO_OPERATOR = "0x0000000000000000000000000000000000000001"; // EVM placeholder
 
 const DEMO_MARKETS = [
   {
@@ -151,7 +150,7 @@ async function seed() {
       createdBy: DEMO_OPERATOR,
       bettingDeadline: market.bettingDeadline,
       resolutionTime: market.resolutionTime,
-      issuerAddress: DEMO_ISSUER,
+      
       operatorAddress: DEMO_OPERATOR,
       outcomes: market.outcomes,
     });

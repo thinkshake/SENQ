@@ -1,6 +1,6 @@
 /**
  * DB model for the trades table.
- * Tracks DEX trades of outcome tokens.
+ * Tracks secondary market trades of outcome positions.
  */
 import { getDb, generateId } from "../index";
 
@@ -13,7 +13,7 @@ export interface Trade {
   taker_gets: string;
   taker_pays: string;
   executed_at: string;
-  ledger_index: number;
+  block_number: number;
   memo_json: string | null;
 }
 
@@ -23,21 +23,18 @@ export interface TradeInsert {
   takerGets: string;
   takerPays: string;
   executedAt: string;
-  ledgerIndex: number;
+  blockNumber: number;
   memoJson?: string;
 }
 
 // ── Queries ────────────────────────────────────────────────────────
 
-/**
- * Create a new trade record.
- */
 export function createTrade(trade: TradeInsert): Trade {
   const db = getDb();
   const id = generateId("trd");
-  
+
   db.query(
-    `INSERT INTO trades (id, market_id, offer_tx, taker_gets, taker_pays, executed_at, ledger_index, memo_json)
+    `INSERT INTO trades (id, market_id, offer_tx, taker_gets, taker_pays, executed_at, block_number, memo_json)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
@@ -46,32 +43,23 @@ export function createTrade(trade: TradeInsert): Trade {
     trade.takerGets,
     trade.takerPays,
     trade.executedAt,
-    trade.ledgerIndex,
+    trade.blockNumber,
     trade.memoJson ?? null
   );
 
   return getTradeById(id)!;
 }
 
-/**
- * Get a trade by ID.
- */
 export function getTradeById(id: string): Trade | null {
   const db = getDb();
   return db.query("SELECT * FROM trades WHERE id = ?").get(id) as Trade | null;
 }
 
-/**
- * Get a trade by offer tx hash.
- */
 export function getTradeByOfferTx(offerTx: string): Trade | null {
   const db = getDb();
   return db.query("SELECT * FROM trades WHERE offer_tx = ?").get(offerTx) as Trade | null;
 }
 
-/**
- * List trades for a market.
- */
 export function listTradesByMarket(marketId: string): Trade[] {
   const db = getDb();
   return db.query(
@@ -79,9 +67,6 @@ export function listTradesByMarket(marketId: string): Trade[] {
   ).all(marketId) as Trade[];
 }
 
-/**
- * List trades before a specific timestamp (for payout calculation).
- */
 export function listTradesBeforeDeadline(marketId: string, deadline: string): Trade[] {
   const db = getDb();
   return db.query(
@@ -89,25 +74,19 @@ export function listTradesBeforeDeadline(marketId: string, deadline: string): Tr
   ).all(marketId, deadline) as Trade[];
 }
 
-/**
- * Get trade volume for a market.
- */
-export function getTradeVolume(marketId: string): { count: number; totalDrops: string } {
+export function getTradeVolume(marketId: string): { count: number; totalWei: string } {
   const db = getDb();
   const result = db.query(
     `SELECT COUNT(*) as count, COALESCE(SUM(CAST(taker_pays AS INTEGER)), 0) as total
      FROM trades WHERE market_id = ?`
   ).get(marketId) as { count: number; total: number };
-  
+
   return {
     count: result.count,
-    totalDrops: result.total.toString(),
+    totalWei: result.total.toString(),
   };
 }
 
-/**
- * Check if trade already exists (by offer tx).
- */
 export function tradeExists(offerTx: string): boolean {
   const db = getDb();
   const result = db.query(

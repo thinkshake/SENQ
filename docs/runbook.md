@@ -1,50 +1,30 @@
 # MITATE Operations Runbook
 
-## XRPL Account Setup
+## EVM Account Setup
 
 ### 1. Create Testnet Accounts
 
+Get test ETH from an EVM testnet faucet:
 ```bash
-# Get test XRP from faucet
-curl -X POST https://faucet.altnet.rippletest.net/accounts
+# Example: Sepolia faucet
+# https://sepoliafaucet.com
+# Or generate a wallet with cast (Foundry):
+cast wallet new
 ```
 
-You need two accounts:
-- **Operator**: Holds escrow, receives bets, sends payouts
-- **Issuer**: Mints YES/NO tokens
+You need one account:
+- **Operator**: Receives bets, sends payouts
 
 ### 2. Configure Operator Account
 
+The operator account is a standard EVM EOA (Externally Owned Account). No on-chain configuration is required beyond funding it with testnet ETH.
+
+For multi-sign governance, configure a Gnosis Safe or similar multi-sig wallet:
 ```javascript
-// Enable rippling for token transfers
-{
-  "TransactionType": "AccountSet",
-  "Account": "OPERATOR_ADDRESS",
-  "SetFlag": 8  // asfDefaultRipple
-}
-
-// Set up multi-sign (2-of-3)
-{
-  "TransactionType": "SignerListSet",
-  "Account": "OPERATOR_ADDRESS",
-  "SignerQuorum": 2,
-  "SignerEntries": [
-    { "SignerEntry": { "Account": "SIGNER_1", "SignerWeight": 1 } },
-    { "SignerEntry": { "Account": "SIGNER_2", "SignerWeight": 1 } },
-    { "SignerEntry": { "Account": "SIGNER_3", "SignerWeight": 1 } }
-  ]
-}
-```
-
-### 3. Configure Issuer Account
-
-```javascript
-// Enable rippling for IOU transfers
-{
-  "TransactionType": "AccountSet",
-  "Account": "ISSUER_ADDRESS",
-  "SetFlag": 8  // asfDefaultRipple
-}
+// Example: Deploy a Gnosis Safe with 2-of-3 signers
+// via https://app.safe.global or the Safe SDK
+// Owners: [SIGNER_1, SIGNER_2, SIGNER_3]
+// Threshold: 2
 ```
 
 ---
@@ -65,7 +45,7 @@ curl -X POST http://localhost:3001/api/markets \
   }'
 ```
 
-Response includes `escrowTx` — sign and submit to XRPL.
+Response includes the operator address to which bets should be sent.
 
 ### Confirm Market Creation
 
@@ -74,8 +54,8 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/confirm \
   -H "Content-Type: application/json" \
   -H "X-Admin-Key: YOUR_ADMIN_KEY" \
   -d '{
-    "escrowTxHash": "HASH_FROM_XRPL",
-    "escrowSequence": 12345
+    "txHash": "HASH_FROM_EVM",
+    "block_number": 12345
   }'
 ```
 
@@ -104,14 +84,14 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/resolve \
   }'
 ```
 
-Response includes `escrowTx` for multi-sign.
+Response includes the resolution ETH transfer payload for multi-sign.
 
 ### Multi-Sign Process
 
-1. Export transaction blob
+1. Export transaction data
 2. Send to signer 1 → get partial signature
 3. Send to signer 2 → get partial signature
-4. Combine signatures → submit to XRPL
+4. Combine signatures → submit to EVM node
 
 ### Execute Payouts
 
@@ -122,7 +102,7 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/payouts \
   -d '{ "batchSize": 50 }'
 ```
 
-Returns Payment tx payloads. Sign and submit each.
+Returns ETH transfer payloads. Sign and submit each.
 
 ### Confirm Payouts
 
@@ -132,7 +112,7 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/payouts/confirm \
   -H "X-Admin-Key: YOUR_ADMIN_KEY" \
   -d '{
     "payoutId": "pay_xxx",
-    "txHash": "HASH_FROM_XRPL"
+    "txHash": "HASH_FROM_EVM"
   }'
 ```
 
@@ -142,29 +122,29 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/payouts/confirm \
 
 ### WebSocket Disconnects
 
-The ledger sync service reconnects automatically. Check logs:
+The block sync service reconnects automatically. Check logs:
 
 ```bash
-fly logs -a mitate-api | grep "XRPL"
+fly logs -a mitate-api | grep "EVM"
 ```
 
 ### Bet Confirmation Fails
 
-1. Check user signed both TrustSet and Payment
-2. Verify trust line limit is sufficient
-3. Check Payment destination is operator address
+1. Check user signed the ETH transfer transaction in MetaMask
+2. Verify the transaction was sent to the operator address
+3. Check calldata encodes the correct market and outcome IDs
 
-### Escrow Finish Fails
+### ETH Transfer Fails
 
-1. Ensure CancelAfter has not passed
-2. Verify multi-sign quorum is met
-3. Check escrow sequence number matches
+1. Ensure operator account has sufficient ETH for gas
+2. Verify the recipient address is correct
+3. Check gas limit is sufficient for the transaction
 
-### Token Mint Fails
+### Payout Calculation Mismatch
 
-1. Verify issuer has DefaultRipple enabled
-2. Check user's trust line exists and has sufficient limit
-3. Ensure issuer has enough XRP reserve
+1. Verify all bet transactions are indexed from on-chain calldata
+2. Re-run payout calculation against confirmed block data
+3. Ensure no bets from after the betting deadline are included
 
 ---
 
@@ -181,7 +161,7 @@ sqlite3 /data/mitate.db ".backup /data/backup.db"
 
 ```bash
 curl http://localhost:3001/health
-# Returns lastLedgerIndex from system_state
+# Returns lastBlockNumber from system_state
 ```
 
 ### Reset Sync (Danger!)
@@ -196,19 +176,18 @@ DELETE FROM system_state WHERE key LIKE 'sync:%';
 
 ### Before Demo
 
-- [ ] Test XRPL accounts have sufficient XRP (>100 XRP each)
+- [ ] EVM operator account has sufficient ETH (>0.5 ETH testnet)
 - [ ] Multi-sign signers have their keys ready
 - [ ] Create 2-3 demo markets with different deadlines
 - [ ] Place some test bets on each market
 - [ ] Verify frontend connects to production API
-- [ ] Test wallet connection flow end-to-end
+- [ ] Test MetaMask wallet connection flow end-to-end
 
 ### Environment Variables
 
 **Fly.io**
 ```bash
-fly secrets set XRPL_OPERATOR_ADDRESS=rXXX
-fly secrets set XRPL_ISSUER_ADDRESS=rYYY
+fly secrets set EVM_OPERATOR_ADDRESS=0xXXX
 fly secrets set ADMIN_API_KEY=xxx
 ```
 
@@ -227,10 +206,10 @@ vercel env add NEXT_PUBLIC_API_URL
 curl https://mitate-api.fly.dev/health
 ```
 
-### XRPL Connection
+### EVM Connection
 
 ```bash
-curl https://mitate-api.fly.dev/health/xrpl
+curl https://mitate-api.fly.dev/health/evm
 ```
 
 ### Logs

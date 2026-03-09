@@ -1,12 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import {
-  isInstalled,
-  getAddress,
-  getNetwork,
-  submitTransaction,
-} from "@gemwallet/api";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -14,10 +8,10 @@ export interface WalletState {
   connected: boolean;
   address: string | null;
   network: string | null;
-  balance: string | null; // XRP balance in drops
+  balance: string | null; // ETH balance in wei
   loading: boolean;
   error: string | null;
-  gemWalletInstalled: boolean;
+  metaMaskInstalled: boolean;
 }
 
 export interface WalletContextType extends WalletState {
@@ -31,6 +25,18 @@ export interface WalletContextType extends WalletState {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
+// ── EIP-1193 window.ethereum type ─────────────────────────────────
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+    };
+  }
+}
+
 // ── Provider ───────────────────────────────────────────────────────
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -43,7 +49,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     balance: null,
     loading: false,
     error: null,
-    gemWalletInstalled: false,
+    metaMaskInstalled: false,
   });
 
   const refreshBalance = useCallback(async () => {
@@ -51,56 +57,40 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     if (!address) return;
 
     try {
-      // Use API proxy to avoid CORS issues
       const response = await fetch(`${API_URL}/balance/${address}`);
       const data = await response.json() as { balance?: string; error?: string };
       if (data.balance) {
-        const balance = data.balance;
-        setState((s) => ({ ...s, balance }));
-      } else {
-        console.error("Balance fetch error:", data.error);
+        setState((s) => ({ ...s, balance: data.balance! }));
       }
     } catch (err) {
       console.error("Failed to fetch balance:", err);
     }
   }, [state.address]);
 
-  // Check if GemWallet is installed on mount
+  // Check if MetaMask is installed on mount
   useEffect(() => {
-    const checkGemWallet = async () => {
-      try {
-        const response = await isInstalled();
-        setState((s) => ({
-          ...s,
-          gemWalletInstalled: response.result.isInstalled,
-        }));
+    const isInstalled = typeof window !== "undefined" && !!window.ethereum;
+    setState((s) => ({ ...s, metaMaskInstalled: isInstalled }));
 
-        // Try to restore session
-        const saved = localStorage.getItem("mitate_wallet");
-        if (saved && response.result.isInstalled) {
+    if (isInstalled) {
+      // Try to restore session
+      const saved = localStorage.getItem("mitate_wallet");
+      if (saved) {
+        try {
           const parsed = JSON.parse(saved);
           if (parsed.address) {
-            // Verify the address is still valid with GemWallet
-            const addrResponse = await getAddress();
-            if (addrResponse.result?.address === parsed.address) {
-              const netResponse = await getNetwork();
-              setState((s) => ({
-                ...s,
-                connected: true,
-                address: parsed.address,
-                network: netResponse.result?.network || "Testnet",
-              }));
-            } else {
-              localStorage.removeItem("mitate_wallet");
-            }
+            setState((s) => ({
+              ...s,
+              connected: true,
+              address: parsed.address,
+              network: parsed.network || null,
+            }));
           }
+        } catch {
+          localStorage.removeItem("mitate_wallet");
         }
-      } catch (err) {
-        console.log("GemWallet not detected");
       }
-    };
-
-    checkGemWallet();
+    }
   }, []);
 
   // Fetch balance when address changes
@@ -114,32 +104,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, loading: true, error: null }));
 
     try {
-      // Check if installed
-      const installedResponse = await isInstalled();
-      if (!installedResponse.result.isInstalled) {
-        throw new Error("GemWallet is not installed. Please install it from gemwallet.app");
+      if (!window.ethereum) {
+        throw new Error("MetaMask is not installed. Please install it from metamask.io");
       }
 
-      // Get address
-      const addressResponse = await getAddress();
-      if (!addressResponse.result?.address) {
-        throw new Error("Failed to get address from GemWallet");
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      }) as string[];
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts returned from MetaMask");
       }
 
-      const address = addressResponse.result.address;
+      const address = accounts[0];
+      const chainIdHex = await window.ethereum.request({ method: "eth_chainId" }) as string;
+      const network = parseInt(chainIdHex, 16).toString();
 
-      // Get network
-      const networkResponse = await getNetwork();
-      const network = networkResponse.result?.network || "Testnet";
-
-      // Verify we're on testnet
-      const networkStr = String(network).toLowerCase();
-      if (!networkStr.includes("testnet") && !networkStr.includes("test")) {
-        throw new Error(`Please switch GemWallet to Testnet. Current: ${network}`);
-      }
-
-      // Save to localStorage
-      localStorage.setItem("mitate_wallet", JSON.stringify({ address }));
+      localStorage.setItem("mitate_wallet", JSON.stringify({ address, network }));
 
       setState({
         connected: true,
@@ -148,7 +129,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         balance: null,
         loading: false,
         error: null,
-        gemWalletInstalled: true,
+        metaMaskInstalled: true,
       });
     } catch (err) {
       setState((s) => ({
@@ -177,18 +158,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Wallet not connected");
       }
 
-      try {
-        const response = await submitTransaction({
-          transaction: tx as any,
-        });
+      if (!window.ethereum) {
+        throw new Error("MetaMask is not available");
+      }
 
-        if (response.result?.hash) {
-          // Refresh balance after transaction
-          setTimeout(() => refreshBalance(), 3000);
-          return { hash: response.result.hash };
+      try {
+        const hash = await window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [tx],
+        }) as string;
+
+        if (!hash) {
+          throw new Error("Transaction rejected");
         }
 
-        throw new Error("Transaction failed or was rejected");
+        // Refresh balance after transaction
+        setTimeout(() => refreshBalance(), 3000);
+        return { hash };
       } catch (err) {
         console.error("Transaction error:", err);
         throw err;

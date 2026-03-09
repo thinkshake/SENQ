@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { type Outcome, formatXrp } from "@/lib/api"
+import { type Outcome, formatEth } from "@/lib/api"
 
 type OutcomesListProps = {
   outcomes: Outcome[]
@@ -54,7 +54,7 @@ export function OutcomesList({
 
               <div className="mt-1.5 text-right">
                 <span className="font-mono text-xs text-muted-foreground">
-                  {formatXrp(outcome.totalAmountDrops)}
+                  {formatEth(outcome.totalAmountWei)}
                 </span>
               </div>
             </button>

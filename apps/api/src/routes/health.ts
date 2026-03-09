@@ -1,31 +1,28 @@
 import { Hono } from "hono";
 import { getDb } from "../db";
-import { getXrplHealth } from "../xrpl/client";
+import { getEvmHealth } from "../evm/client";
 
 const app = new Hono();
 
 /**
  * Health check endpoint.
- * Returns 200 if the server is running.
  */
 app.get("/health", async (c) => {
-  const xrplHealth = await getXrplHealth();
+  const evmHealth = await getEvmHealth();
 
   return c.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    xrpl: xrplHealth,
+    evm: evmHealth,
   });
 });
 
 /**
  * Readiness check endpoint.
- * Returns 200 only if all dependencies are ready.
  */
 app.get("/ready", async (c) => {
   const checks: Record<string, { status: "ok" | "error"; message?: string }> = {};
 
-  // Check database
   try {
     const db = getDb();
     const result = db.query("SELECT 1 as test").get() as { test: number } | null;
@@ -41,14 +38,13 @@ app.get("/ready", async (c) => {
     };
   }
 
-  // Check XRPL connection
-  const xrplHealth = await getXrplHealth();
-  if (xrplHealth.connected) {
-    checks.xrpl = { status: "ok" };
+  const evmHealth = await getEvmHealth();
+  if (evmHealth.connected) {
+    checks.evm = { status: "ok" };
   } else {
-    checks.xrpl = {
+    checks.evm = {
       status: "error",
-      message: xrplHealth.error || "Not connected",
+      message: evmHealth.error || "Not connected",
     };
   }
 
@@ -65,33 +61,20 @@ app.get("/ready", async (c) => {
 });
 
 /**
- * Get XRP balance for an address.
- * Proxies the request to XRPL to avoid CORS issues.
+ * Get ETH balance for an EVM address.
+ * Proxies to EVM RPC to avoid CORS issues.
  */
 app.get("/balance/:address", async (c) => {
   const address = c.req.param("address");
-  
-  if (!address || !address.startsWith("r") || address.length < 25) {
-    return c.json({ error: "Invalid address" }, 400);
+
+  if (!address || !address.startsWith("0x") || address.length !== 42) {
+    return c.json({ error: "Invalid EVM address" }, 400);
   }
 
   try {
-    const response = await fetch("https://s.altnet.rippletest.net:51234", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        method: "account_info",
-        params: [{ account: address, ledger_index: "validated" }],
-      }),
-    });
-    
-    const data = await response.json() as { result?: { account_data?: { Balance?: string }; error?: string } };
-    
-    if (data.result?.account_data?.Balance) {
-      return c.json({ balance: data.result.account_data.Balance });
-    }
-    
-    return c.json({ error: data.result?.error || "Account not found" }, 404);
+    const { getEvmBalance } = await import("../evm/client");
+    const balanceWei = await getEvmBalance(address as `0x${string}`);
+    return c.json({ balance: balanceWei.toString() });
   } catch (err) {
     return c.json({ error: "Failed to fetch balance" }, 500);
   }

@@ -1,8 +1,8 @@
 # MITATE Demo Guide
 
-**Hackathon:** JFIIP Demo Day — February 24, 2026  
-**Duration:** 3 minutes  
-**Audience:** Judges evaluating XRPL feature usage
+**Hackathon:** JFIIP Demo Day — February 24, 2026
+**Duration:** 3 minutes
+**Audience:** Judges evaluating EVM feature usage
 
 ---
 
@@ -29,13 +29,10 @@ Create `apps/api/.env`:
 PORT=3001
 NODE_ENV=development
 DATABASE_PATH=/data/mitate.db
-XRPL_RPC_URL=https://s.altnet.rippletest.net:51234
-XRPL_WS_URL=wss://s.altnet.rippletest.net:51233
-XRPL_NETWORK_ID=1
+EVM_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
 
-# Get from testnet faucet: https://faucet.altnet.rippletest.net/accounts
-XRPL_OPERATOR_ADDRESS=rYourOperatorAddress...
-XRPL_ISSUER_ADDRESS=rYourIssuerAddress...
+# Operator wallet address (0x...)
+EVM_OPERATOR_ADDRESS=0xYourOperatorAddress...
 
 ADMIN_API_KEY=your-secure-admin-key
 ```
@@ -52,9 +49,10 @@ curl http://localhost:3001/health
 
 ### 3. Fund Wallets
 
-Get testnet XRP for operator wallet:
+Get testnet ETH for operator wallet from an EVM testnet faucet:
 ```bash
-curl -X POST https://faucet.altnet.rippletest.net/accounts
+# Example: Sepolia faucet
+# https://sepoliafaucet.com
 ```
 
 ---
@@ -81,9 +79,9 @@ Click "Test Open" button next to the Draft market.
 ### Step 3: Place Bets (User Flow)
 
 1. Go to `http://localhost:3000`
-2. Connect GemWallet (must be on Testnet)
+2. Connect MetaMask (must be on Testnet)
 3. Click a market → Select outcome → Enter amount
-4. Click "予測する" → Sign in GemWallet
+4. Click "予測する" → Sign in MetaMask
 
 ### Step 4: Close Market (Admin UI)
 
@@ -112,9 +110,9 @@ Response includes payout transactions to sign:
     "payouts": [
       {
         "id": "pay_xxx",
-        "userId": "rWinnerAddress...",
-        "amountDrops": "15000000",
-        "payoutTx": { /* Payment tx to sign */ }
+        "userId": "0xWinnerAddress...",
+        "amountWei": "15000000000000000",
+        "payoutTx": { /* ETH transfer tx to sign */ }
       }
     ]
   }
@@ -176,7 +174,7 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 |----------|--------|-------------|
 | `/api/users/:address/bets` | GET | List user's bets |
 | `/api/users/:address/attributes` | GET | Get user attributes |
-| `/balance/:address` | GET | Get XRP balance |
+| `/balance/:address` | GET | Get ETH balance |
 
 ---
 
@@ -184,7 +182,7 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 
 ### Opening (0:00 - 0:20)
 
-> "MITATE is a prediction market powered entirely by XRPL. It uses 6 native XRPL features — no smart contracts, pure XRPL."
+> "MITATE is a prediction market powered by EVM. It uses native EVM features — ETH transfers, calldata, and multi-sign governance."
 
 **Show:** Homepage with markets
 
@@ -195,26 +193,23 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 > "Let's bet on the Miyagi governor election."
 
 **Actions:**
-1. Connect GemWallet
-2. Select market → Select outcome → Enter 5 XRP
+1. Connect MetaMask
+2. Select market → Select outcome → Enter 0.01 ETH
 3. Sign transaction
 
-> "My bet is recorded on XRPL with a memo containing the market and outcome."
+> "My bet is recorded on-chain with calldata containing the market and outcome."
 
 ---
 
-### Show XRPL Features (1:00 - 2:00)
+### Show EVM Features (1:00 - 2:00)
 
-> "Six XRPL features power this:"
+> "Three EVM features power this:"
 
-1. **Escrow** — "Bets locked with time-based deadline"
-2. **Issued Currency** — "Each outcome has its own token"
-3. **Trust Lines** — "Users opt-in to hold outcome tokens"
-4. **DEX** — "Trade positions before resolution"
-5. **Multi-Sign** — "Resolution requires committee approval"
-6. **Memo** — "All transactions carry structured data"
+1. **ETH Transfer** — "Bets sent directly to operator with deadline enforced by block_number"
+2. **calldata** — "All transactions carry structured market and outcome data"
+3. **Multi-Sign** — "Resolution requires committee approval"
 
-**Show:** Transaction on XRPL Explorer
+**Show:** Transaction on EVM Explorer
 
 ---
 
@@ -228,32 +223,29 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 
 ### Closing (2:50 - 3:00)
 
-> "MITATE proves XRPL's native primitives can power a complete prediction market — all verifiable on-chain."
+> "MITATE proves EVM's native primitives can power a complete prediction market — all verifiable on-chain."
 
 ---
 
-## XRPL Features Summary
+## EVM Features Summary
 
 | Feature | Usage |
 |---------|-------|
-| **Escrow** | Time-locked XRP pool for bets |
-| **Issued Currency** | Outcome tokens per market |
-| **Trust Line** | Required to hold outcome tokens |
-| **DEX** | Secondary trading of positions |
+| **ETH Transfer** | Native ETH pool for bets and payouts |
+| **calldata** | Structured audit trail on all transactions |
 | **Multi-Sign** | Resolution governance |
-| **Memo** | Structured audit trail on all transactions |
 
 ---
 
 ## Troubleshooting
 
-### "temREDUNDANT" Error
-- Payment going to self (operator == bettor)
-- Fix: Ensure `XRPL_OPERATOR_ADDRESS` is set and different from user
+### "Nonce too low" Error
+- Transaction sent with stale nonce
+- Fix: Refresh MetaMask account or reset account nonce in MetaMask settings
 
-### "LastLedgerSequence" Error
-- Transaction expired before signing
-- Fix: Try again quickly, or check network latency
+### "Transaction underpriced" Error
+- Gas price too low
+- Fix: Increase gas price or use EIP-1559 fee estimation
 
 ### Market Stuck in Draft
 - Run `POST /api/markets/:id/test-open` to open
@@ -274,5 +266,5 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 | `apps/api/.env` | API configuration |
 | `apps/api/src/services/bets.ts` | Bet placement logic |
 | `apps/api/src/services/payouts.ts` | Payout calculation |
-| `apps/api/src/xrpl/tx-builder.ts` | XRPL transaction builders |
+| `apps/api/src/evm/tx-builder.ts` | EVM transaction builders |
 | `apps/web/app/admin/page.tsx` | Admin dashboard |

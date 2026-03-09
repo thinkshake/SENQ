@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useWallet } from "@/contexts/WalletContext"
-import { formatXrp } from "@/lib/api"
+import { formatEth } from "@/lib/api"
 
 const navItems = [
   { label: "マーケット", href: "/" },
@@ -48,7 +48,7 @@ export function SiteHeader() {
           {wallet.connected ? (
             <>
               <span className="hidden font-mono text-sm text-foreground sm:inline-block">
-                {wallet.balance ? formatXrp(wallet.balance) : "..."}
+                {wallet.balance ? formatEth(wallet.balance) : "..."}
               </span>
               <button
                 onClick={wallet.disconnect}
@@ -66,15 +66,15 @@ export function SiteHeader() {
                 "rounded border px-3 py-1.5 text-xs transition-colors",
                 wallet.loading
                   ? "border-border text-muted-foreground cursor-wait"
-                  : !wallet.gemWalletInstalled
+                  : !wallet.metaMaskInstalled
                   ? "border-border text-muted-foreground"
                   : "border-foreground bg-foreground text-background hover:opacity-90"
               )}
             >
               {wallet.loading
                 ? "接続中..."
-                : !wallet.gemWalletInstalled
-                ? "GemWalletをインストール"
+                : !wallet.metaMaskInstalled
+                ? "MetaMaskをインストール"
                 : "ウォレット接続"}
             </button>
           )}

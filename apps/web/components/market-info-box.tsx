@@ -1,14 +1,14 @@
-import { formatXrp } from "@/lib/api"
+import { formatEth } from "@/lib/api"
 
 type MarketInfoBoxProps = {
-  totalPoolDrops: string
+  totalPoolWei: string
   participants: number
   createdAt: string
   endDate: string
 }
 
 export function MarketInfoBox({
-  totalPoolDrops,
+  totalPoolWei,
   participants,
   createdAt,
   endDate,
@@ -22,7 +22,7 @@ export function MarketInfoBox({
   }
 
   const rows = [
-    { label: "総取引量", value: formatXrp(totalPoolDrops) },
+    { label: "総取引量", value: formatEth(totalPoolWei) },
     { label: "参加者数", value: `${participants}人` },
     { label: "作成日", value: formatDate(createdAt) },
     { label: "終了日", value: formatDate(endDate) },

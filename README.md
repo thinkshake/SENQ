@@ -1,18 +1,18 @@
 # MITATE 見立て
 
-> XRPL Parimutuel Prediction Market
+> EVM Parimutuel Prediction Market
 
 **Demo Day: February 24, 2026** | [JFIIP Hackathon](https://jfiip.xrpl.org)
 
 ## Overview
 
-MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with XRP, and winners share the entire pool proportionally.
+MITATE is a prediction market DApp built on EVM using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with ETH, and winners share the entire pool proportionally.
 
 ### What Makes MITATE Special?
 
-- **XRPL-Native Design**: Uses 6 XRPL primitives (Escrow, Issued Currency, Trust Line, DEX, Multi-Sign, Memo)
+- **EVM-Native Design**: Uses EVM primitives (ETH transfer, calldata, Multi-Sign)
 - **Parimutuel Pricing**: No complex AMM math — simple pool-based payouts
-- **Verifiable On-Chain**: All bets and outcomes recorded on XRPL ledger
+- **Verifiable On-Chain**: All bets and outcomes recorded on the EVM blockchain
 - **Multi-Sign Resolution**: 2-of-3 governance prevents manipulation
 
 ## Architecture
@@ -31,29 +31,25 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        XRPL Testnet                              │
-│     Escrow │ Issued Currency │ Trust Line │ DEX │ Multi-Sign     │
+│                        EVM Testnet                               │
+│              ETH Transfer │ calldata │ Multi-Sign                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## XRPL Features Used
+## EVM Features Used
 
 | Feature | Usage |
 |---------|-------|
-| **Escrow** | Pool XRP bets with time-locked release |
-| **Issued Currency** | YES/NO outcome tokens per market |
-| **Trust Line** | Users hold outcome tokens |
-| **DEX** | Secondary trading of outcome tokens |
+| **ETH Transfer** | Pool ETH bets and release to winners |
+| **calldata** | On-chain metadata for all transactions |
 | **Multi-Sign** | 2-of-3 resolution governance |
-| **Memo** | On-chain metadata for all transactions |
 
 ## User Flow
 
 1. **Market Created** → Admin creates market with betting deadline
-2. **Bets Placed** → Users bet XRP on YES or NO, receive outcome tokens
-3. **Trading** → Users can trade tokens on XRPL DEX before deadline
-4. **Resolution** → Multi-sign committee resolves outcome
-5. **Payout** → Winners receive proportional share of pool
+2. **Bets Placed** → Users bet ETH on YES or NO
+3. **Resolution** → Multi-sign committee resolves outcome
+4. **Payout** → Winners receive proportional share of pool
 
 ## Tech Stack
 
@@ -61,7 +57,7 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
 |-------|------------|
 | Frontend | Next.js 16, React, Tailwind CSS, shadcn/ui |
 | Backend | Hono, Bun, SQLite (WAL mode) |
-| Blockchain | XRPL Testnet, xrpl.js |
+| Blockchain | EVM (Anvil locally / any EVM testnet), viem |
 | Deployment | Vercel (frontend), Fly.io (backend) |
 
 ## Development
@@ -70,96 +66,196 @@ MITATE is a prediction market DApp built on XRPL (XRP Ledger) using parimutuel b
 
 - [Bun](https://bun.sh) 1.0+
 - Node.js 20+ (for Next.js)
-- XRPL Testnet accounts (operator, issuer)
+- [Foundry](https://book.getfoundry.sh) (for Anvil local node)
 
-### Option 1: Docker Compose (Recommended)
+### Running Locally with Anvil (Recommended)
+
+[Anvil](https://book.getfoundry.sh/anvil/) is a local EVM node that ships with Foundry. It starts with 10 pre-funded accounts — no faucet or real ETH needed.
+
+#### 1. Install Foundry
 
 ```bash
-# Clone
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Verify:
+
+```bash
+anvil --version
+```
+
+#### 2. Clone and Install
+
+```bash
+git clone https://github.com/thinkshake/mitate.git
+cd mitate
+bun install
+```
+
+#### 3. Start Anvil
+
+In a dedicated terminal:
+
+```bash
+anvil
+```
+
+Anvil starts at `http://127.0.0.1:8545` (Chain ID: 31337) and prints pre-funded accounts:
+
+```
+Available Accounts
+==================
+(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
+
+Private Keys
+==================
+(0) 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+Keep this terminal running throughout development.
+
+#### 4. Configure Environment
+
+**Backend:**
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+Edit `apps/api/.env`:
+
+```env
+PORT=3001
+DATABASE_PATH=./data/mitate.db
+EVM_RPC_URL=http://127.0.0.1:8545
+EVM_CHAIN_ID=31337
+EVM_OPERATOR_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+EVM_OPERATOR_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ADMIN_API_KEY=dev-admin-key
+```
+
+> ⚠️ These are Anvil's well-known dev keys — safe to use locally, **never use in production**.
+
+**Frontend:**
+
+```bash
+echo 'NEXT_PUBLIC_API_URL=http://localhost:3001/api' > apps/web/.env.local
+```
+
+#### 5. Run Database Migrations
+
+```bash
+cd apps/api
+bun run migrate
+cd ../..
+```
+
+#### 6. Start the Services
+
+Open two more terminals:
+
+**Terminal 2 — API:**
+```bash
+cd apps/api
+bun run dev
+```
+
+**Terminal 3 — Web:**
+```bash
+cd apps/web
+bun run dev
+```
+
+#### 7. Verify Everything is Running
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:3001 |
+| Anvil RPC | http://127.0.0.1:8545 |
+
+Quick sanity checks:
+
+```bash
+# API health
+curl http://localhost:3001/api/markets
+
+# Anvil block number
+cast block-number --rpc-url http://127.0.0.1:8545
+```
+
+---
+
+### Option 2: Docker Compose (includes Anvil)
+
+Anvil is included as a service in `docker-compose.yml` — no separate install needed.
+
+```bash
 git clone https://github.com/thinkshake/mitate.git
 cd mitate
 
-# Configure environment
-cp .env.example .env
-# Edit .env with XRPL addresses
+# Configure the API environment (Anvil keys pre-filled)
+cp apps/api/.env.example apps/api/.env
+# EVM_RPC_URL and EVM_CHAIN_ID are overridden by docker-compose automatically
 
-# Start all services
+# Start everything (Anvil → API → Web)
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:3001 |
+| Anvil RPC | http://localhost:8545 |
 
-### Option 2: Local Development
+> The API container connects to Anvil via the internal Docker network (`http://anvil:8545`).
+> Anvil is exposed on your host at `http://localhost:8545` for tools like `cast` or MetaMask.
+
+### Option 3: Manual Local (EVM Testnet)
 
 ```bash
-# Clone
 git clone https://github.com/thinkshake/mitate.git
 cd mitate
-
-# Install dependencies
 bun install
 
-# Configure environment
 cp apps/api/.env.example apps/api/.env
-# Edit .env with XRPL addresses and API key
+# Edit .env with your testnet RPC URL and operator wallet
 
-# Run database migrations
-cd apps/api && bun run migrate
-
-# Start development servers
-bun run dev  # Starts both frontend and backend
+cd apps/api && bun run migrate && cd ../..
+bun run dev
 ```
 
-### Getting XRPL Testnet Accounts
+### Getting Testnet Accounts (Option 3)
 
-You need two XRPL Testnet accounts: **Operator** (holds escrow, receives bets) and **Issuer** (mints tokens).
+You need an EVM testnet account as **Operator** (holds ETH, receives bets, sends payouts).
 
-1. **Get accounts from the XRPL Testnet Faucet:**
+1. Get testnet ETH (e.g. Sepolia): https://sepoliafaucet.com  
+   Or generate a wallet: `cast wallet new`
+
+2. Generate an Admin API Key:
    ```bash
-   # Get Operator account
-   curl -X POST https://faucet.altnet.rippletest.net/accounts
-   # Response: {"account":{"xAddress":"...", "address":"rXXX...", "secret":"sXXX..."}, ...}
-   
-   # Get Issuer account (run again)
-   curl -X POST https://faucet.altnet.rippletest.net/accounts
-   ```
-   
-   Or use the web interface: https://xrpl.org/resources/dev-tools/xrp-faucets
-
-2. **Save the addresses:**
-   - `XRPL_OPERATOR_ADDRESS` = first account's `address` (starts with `r`)
-   - `XRPL_ISSUER_ADDRESS` = second account's `address` (starts with `r`)
-   - Keep the `secret` values safe — needed for signing transactions
-
-3. **Generate Admin API Key:**
-   ```bash
-   # Generate a random 32-character key
    openssl rand -hex 16
-   # Or use any secure random string generator
    ```
 
-### Environment Variables
+### Environment Variables Reference
 
 **Backend (apps/api/.env)**
-```
+```env
 PORT=3001
 DATABASE_PATH=./data/mitate.db
-XRPL_RPC_URL=https://s.altnet.rippletest.net:51234
-XRPL_WS_URL=wss://s.altnet.rippletest.net:51233
-XRPL_OPERATOR_ADDRESS=rXXX...    # From faucet step 1
-XRPL_ISSUER_ADDRESS=rYYY...      # From faucet step 1
-ADMIN_API_KEY=your-secret-key    # From step 3
+EVM_RPC_URL=http://127.0.0.1:8545          # Anvil; or https://sepolia.infura.io/v3/KEY
+EVM_CHAIN_ID=31337                          # Anvil; or 11155111 for Sepolia
+EVM_OPERATOR_ADDRESS=0xYourOperatorAddress
+EVM_OPERATOR_PRIVATE_KEY=0xYourPrivateKey
+ADMIN_API_KEY=your-secret-key
 ```
 
 **Frontend (apps/web/.env.local)**
-```
+```env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
@@ -177,7 +273,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 - `GET /api/markets/:id/bets/preview` — Preview payout
 
 ### Trading
-- `POST /api/markets/:id/offers` — Create DEX offer
+- `POST /api/markets/:id/offers` — Create EVM trade
 - `GET /api/markets/:id/trades` — List trades
 
 ### Resolution
@@ -192,8 +288,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```bash
 cd apps/api
 fly launch
-fly secrets set XRPL_OPERATOR_ADDRESS=rXXX...
-fly secrets set XRPL_ISSUER_ADDRESS=rYYY...
+fly secrets set EVM_OPERATOR_ADDRESS=0xXXX...
+fly secrets set EVM_OPERATOR_PRIVATE_KEY=0xXXX...
 fly secrets set ADMIN_API_KEY=your-secret-key
 fly deploy
 ```

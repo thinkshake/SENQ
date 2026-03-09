@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { type Market, formatXrp, formatDeadline } from "@/lib/api"
+import { type Market, formatEth, formatDeadline } from "@/lib/api"
 
 function ProbabilityBar({ label, probability }: { label: string; probability: number }) {
   return (
@@ -71,7 +71,7 @@ export function MarketCard({ market }: { market: Market }) {
 
         <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">
-            総取引量: <span className="font-mono">{formatXrp(market.totalPoolDrops)}</span>
+            総取引量: <span className="font-mono">{formatEth(market.totalPoolWei)}</span>
           </span>
           <span className="text-xs text-muted-foreground">
             {formatDeadline(market.bettingDeadline)}

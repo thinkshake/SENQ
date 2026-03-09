@@ -10,7 +10,7 @@ import { MarketInfoBox } from "@/components/market-info-box"
 import { PositionBox } from "@/components/position-box"
 import {
   getBetsForMarket,
-  formatXrp,
+  formatEth,
   type Bet,
 } from "@/lib/api"
 
@@ -48,9 +48,9 @@ export default function MarketDetailPage({ params }: PageProps) {
     .filter((bet) => bet.bettorAddress === wallet.address)
     .map((bet) => ({
       outcomeLabel: bet.outcomeLabel,
-      amountDrops: bet.amountDrops,
+      amountWei: bet.amountWei,
       weightScore: bet.weightScore,
-      effectiveAmountDrops: bet.effectiveAmountDrops,
+      effectiveAmountWei: bet.effectiveAmountWei,
     }))
 
   const selectedOutcome = market?.outcomes.find((o) => o.id === selectedOutcomeId) ?? null
@@ -162,7 +162,7 @@ export default function MarketDetailPage({ params }: PageProps) {
                       </span>
                     </div>
                     <span className="font-mono text-xs text-foreground">
-                      {formatXrp(bet.amountDrops)}
+                      {formatEth(bet.amountWei)}
                     </span>
                   </div>
                 ))}
@@ -193,7 +193,7 @@ export default function MarketDetailPage({ params }: PageProps) {
           )}
 
           <MarketInfoBox
-            totalPoolDrops={market.totalPoolDrops}
+            totalPoolWei={market.totalPoolWei}
             participants={uniqueBettors}
             createdAt={market.createdAt}
             endDate={market.bettingDeadline}
