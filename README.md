@@ -281,6 +281,69 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 - `POST /api/markets/:id/payouts` — Execute payouts (admin)
 - `GET /api/markets/:id/payouts` — List payouts
 
+
+## Smart Contracts
+
+SENQ does **not** use Solidity smart contracts. Instead, it uses raw ETH transfers with on-chain `calldata` metadata, signed by an operator EOA wallet. This means:
+
+- ✅ No contract deployment required
+- ✅ Works on any EVM-compatible chain out of the box
+- ✅ Bets and payouts are standard ETH transactions — fully auditable on any block explorer
+
+### On-Chain Architecture
+
+| Component | Implementation |
+|-----------|---------------|
+| Pool | Operator EOA collects ETH bets |
+| Metadata | `calldata` JSON attached to each tx |
+| Payouts | Operator EOA sends ETH to winners |
+| Governance | Off-chain resolution via Admin API (multi-sig planned) |
+
+### Operator Wallet Setup
+
+The operator wallet is the only on-chain setup required. It must hold enough ETH to cover gas for payouts.
+
+#### Local (Anvil)
+
+Anvil's pre-funded dev account is used automatically — no setup needed.
+
+```bash
+# Verify operator balance
+cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://127.0.0.1:8545
+```
+
+#### Testnet (e.g. Sepolia)
+
+1. Generate a new wallet:
+   ```bash
+   cast wallet new
+   # Outputs: Address + Private Key
+   ```
+
+2. Fund it from a faucet:
+   - Sepolia: https://sepoliafaucet.com
+   - Holesky: https://holesky-faucet.pk910.de
+
+3. Set in your `.env`:
+   ```env
+   EVM_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+   EVM_CHAIN_ID=11155111
+   EVM_OPERATOR_ADDRESS=0xYourAddress
+   EVM_OPERATOR_PRIVATE_KEY=0xYourPrivateKey
+   ```
+
+4. Verify connectivity:
+   ```bash
+   cast block-number --rpc-url https://sepolia.infura.io/v3/YOUR_KEY
+   cast balance 0xYourAddress --rpc-url https://sepolia.infura.io/v3/YOUR_KEY
+   ```
+
+#### Mainnet
+
+Same as testnet — use a mainnet RPC (Infura, Alchemy, or your own node) and fund the operator wallet with real ETH for gas.
+
+> ⚠️ Keep `EVM_OPERATOR_PRIVATE_KEY` secret. Use environment secrets (Fly.io secrets, Vercel env vars) — never commit it.
+
 ## Deployment
 
 ### Backend (Fly.io)
