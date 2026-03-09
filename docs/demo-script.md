@@ -1,4 +1,4 @@
-# MITATE Demo Script
+# SENQ Demo Script
 
 **Duration:** 3 minutes  
 **Audience:** JFIIP Hackathon judges  
@@ -7,7 +7,7 @@
 
 ## Opening (0:00 - 0:20)
 
-"MITATE is a prediction market powered by XRPL. It uses 6 native XRPL features to create a trustless, verifiable betting platform."
+"SENQ is a prediction market powered by XRPL. It uses 6 native XRPL features to create a trustless, verifiable betting platform."
 
 **Show:** Homepage with market listings
 
@@ -15,7 +15,7 @@
 
 ## Problem & Solution (0:20 - 0:40)
 
-"Traditional prediction markets use complex AMM pricing that doesn't fit XRPL's architecture. MITATE uses parimutuel betting instead — simple pool-based payouts that work perfectly with XRPL's primitives."
+"Traditional prediction markets use complex AMM pricing that doesn't fit XRPL's architecture. SENQ uses parimutuel betting instead — simple pool-based payouts that work perfectly with XRPL's primitives."
 
 **Show:** Architecture diagram highlighting XRPL features
 
@@ -70,9 +70,9 @@
 
 ## Closing (2:40 - 3:00)
 
-"MITATE demonstrates how XRPL's unique features — Escrow, Issued Currency, Trust Lines, DEX, Multi-Sign, and Memos — can power a fully on-chain prediction market."
+"SENQ demonstrates how XRPL's unique features — Escrow, Issued Currency, Trust Lines, DEX, Multi-Sign, and Memos — can power a fully on-chain prediction market."
 
-"All data is verifiable on the ledger. All transactions carry MITATE memos for transparency."
+"All data is verifiable on the ledger. All transactions carry SENQ memos for transparency."
 
 **Show:** GitHub repo + live deployment URL
 

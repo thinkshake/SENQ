@@ -9,7 +9,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
 
   /** SQLite database path */
-  databasePath: process.env.DATABASE_PATH || "./data/mitate.db",
+  databasePath: process.env.DATABASE_PATH || "./data/senq.db",
 
   /** EVM JSON-RPC endpoint */
   evmRpcUrl: process.env.EVM_RPC_URL || "http://localhost:8545",

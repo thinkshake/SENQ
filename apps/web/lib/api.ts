@@ -1,5 +1,5 @@
 /**
- * MITATE API client for frontend.
+ * SENQ API client for frontend.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";

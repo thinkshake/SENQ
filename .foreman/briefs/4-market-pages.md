@@ -5,15 +5,15 @@
 
 ## Project Context
 
-**Name:** mitate-ui-migration
+**Name:** senq-ui-migration
 
 ## Requirements
 
-# MITATE UI Migration Requirements
+# SENQ UI Migration Requirements
 
 ## Background
 
-MITATE is an XRPL-powered prediction market for the JFIIP hackathon (demo day: Feb 24, 2026). The initial implementation is complete with:
+SENQ is an XRPL-powered prediction market for the JFIIP hackathon (demo day: Feb 24, 2026). The initial implementation is complete with:
 - Backend API (Hono + SQLite + xrpl.js)
 - XRPL integration (Escrow, Issued Currency, Trust Lines, DEX, Multi-Sign, Memo)
 - Basic frontend (apps/web) with GemWallet integration
@@ -101,7 +101,7 @@ A team member created a new UI design in `apps/mock/` with superior design and n
 # API Design
 
 ## Base URL
-`http://localhost:3001` (dev) / `https://api.mitate.app` (prod)
+`http://localhost:3001` (dev) / `https://api.senq.app` (prod)
 
 ## Endpoints
 

@@ -10,7 +10,7 @@ const guides = [
   {
     title: "How to Place Your First Trade",
     description:
-      "Step-by-step guide to buying and selling contracts on MITATE.",
+      "Step-by-step guide to buying and selling contracts on SENQ.",
     icon: "🎯",
   },
   {
@@ -34,7 +34,7 @@ const guides = [
   {
     title: "FAQ",
     description:
-      "Frequently asked questions about MITATE and prediction markets.",
+      "Frequently asked questions about SENQ and prediction markets.",
     icon: "❓",
   },
 ];
@@ -97,7 +97,7 @@ export default function LearnPage() {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-black">Getting Started with MITATE</h3>
+                <h3 className="font-semibold text-black">Getting Started with SENQ</h3>
                 <p className="text-sm text-gray-500">5 min • Beginner</p>
               </div>
             </CardContent>

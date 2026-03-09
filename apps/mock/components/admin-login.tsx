@@ -21,7 +21,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-2">
           <span className="font-mono text-xl font-bold tracking-[0.2em] text-foreground">
-            MITATE
+            SENQ
           </span>
           <span className="text-sm text-muted-foreground">管理画面</span>
         </div>

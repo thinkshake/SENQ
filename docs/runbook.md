@@ -1,4 +1,4 @@
-# MITATE Operations Runbook
+# SENQ Operations Runbook
 
 ## EVM Account Setup
 
@@ -125,7 +125,7 @@ curl -X POST http://localhost:3001/api/markets/mkt_xxx/payouts/confirm \
 The block sync service reconnects automatically. Check logs:
 
 ```bash
-fly logs -a mitate-api | grep "EVM"
+fly logs -a senq-api | grep "EVM"
 ```
 
 ### Bet Confirmation Fails
@@ -153,8 +153,8 @@ fly logs -a mitate-api | grep "EVM"
 ### Backup SQLite
 
 ```bash
-fly ssh console -a mitate-api
-sqlite3 /data/mitate.db ".backup /data/backup.db"
+fly ssh console -a senq-api
+sqlite3 /data/senq.db ".backup /data/backup.db"
 ```
 
 ### Check Sync State
@@ -203,17 +203,17 @@ vercel env add NEXT_PUBLIC_API_URL
 ### Health Check
 
 ```bash
-curl https://mitate-api.fly.dev/health
+curl https://senq-api.fly.dev/health
 ```
 
 ### EVM Connection
 
 ```bash
-curl https://mitate-api.fly.dev/health/evm
+curl https://senq-api.fly.dev/health/evm
 ```
 
 ### Logs
 
 ```bash
-fly logs -a mitate-api --region nrt
+fly logs -a senq-api --region nrt
 ```
