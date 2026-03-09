@@ -23,6 +23,9 @@ export const config = {
   /** Market operator private key (for auto-payouts) */
   operatorPrivateKey: process.env.EVM_OPERATOR_PRIVATE_KEY || "",
 
+  /** SENQMarket contract address */
+  evmContractAddress: process.env.EVM_CONTRACT_ADDRESS || "",
+
   /** Admin API key for privileged operations */
   adminApiKey: process.env.ADMIN_API_KEY || "",
 } as const;

@@ -284,45 +284,55 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
 ## Smart Contracts
 
-SENQ does **not** use Solidity smart contracts. Instead, it uses raw ETH transfers with on-chain `calldata` metadata, signed by an operator EOA wallet. This means:
+SENQ uses a **SENQMarket** Solidity contract (`contracts/src/SENQMarket.sol`) for trustless, on-chain prediction markets. All bets, resolution, and payouts happen on-chain — no operator EOA pooling required.
 
-- ✅ No contract deployment required
-- ✅ Works on any EVM-compatible chain out of the box
-- ✅ Bets and payouts are standard ETH transactions — fully auditable on any block explorer
+- **Parimutuel pool**: ETH bets go directly into the contract
+- **Owner-only resolution**: Market outcomes resolved by contract owner
+- **Automatic payouts**: Winners claim proportional share on-chain (2% protocol fee)
+- **Cancel & refund**: Owner can cancel markets; bettors reclaim their ETH
 
-### On-Chain Architecture
+### Contract Architecture
 
 | Component | Implementation |
 |-----------|---------------|
-| Pool | Operator EOA collects ETH bets |
-| Metadata | `calldata` JSON attached to each tx |
-| Payouts | Operator EOA sends ETH to winners |
-| Governance | Off-chain resolution via Admin API (multi-sig planned) |
+| Pool | SENQMarket contract holds all ETH |
+| Bets | `betYes()` / `betNo()` — payable functions |
+| Resolution | `resolve()` — owner-only, after deadline |
+| Payouts | `claimPayout()` — winners claim proportional share |
+| Fees | 2% of losing pool; withdrawable by owner |
+
+### Local Deployment (Anvil)
+
+```bash
+cd contracts
+forge build
+forge test
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+# Copy deployed address to EVM_CONTRACT_ADDRESS in apps/api/.env
+```
+
+### Testnet Deployment (Sepolia)
+
+```bash
+forge script script/Deploy.s.sol --rpc-url $EVM_RPC_URL --private-key $EVM_OPERATOR_PRIVATE_KEY --broadcast --verify
+```
 
 ### Operator Wallet Setup
 
-The operator wallet is the only on-chain setup required. It must hold enough ETH to cover gas for payouts.
+The operator wallet deploys the contract and resolves markets. It needs ETH for gas.
 
 #### Local (Anvil)
 
 Anvil's pre-funded dev account is used automatically — no setup needed.
-
-```bash
-# Verify operator balance
-cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://127.0.0.1:8545
-```
 
 #### Testnet (e.g. Sepolia)
 
 1. Generate a new wallet:
    ```bash
    cast wallet new
-   # Outputs: Address + Private Key
    ```
 
-2. Fund it from a faucet:
-   - Sepolia: https://sepoliafaucet.com
-   - Holesky: https://holesky-faucet.pk910.de
+2. Fund it from a faucet (e.g. https://sepoliafaucet.com)
 
 3. Set in your `.env`:
    ```env
@@ -330,17 +340,12 @@ cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://127.0.0
    EVM_CHAIN_ID=11155111
    EVM_OPERATOR_ADDRESS=0xYourAddress
    EVM_OPERATOR_PRIVATE_KEY=0xYourPrivateKey
-   ```
-
-4. Verify connectivity:
-   ```bash
-   cast block-number --rpc-url https://sepolia.infura.io/v3/YOUR_KEY
-   cast balance 0xYourAddress --rpc-url https://sepolia.infura.io/v3/YOUR_KEY
+   EVM_CONTRACT_ADDRESS=0xDeployedContractAddress
    ```
 
 #### Mainnet
 
-Same as testnet — use a mainnet RPC (Infura, Alchemy, or your own node) and fund the operator wallet with real ETH for gas.
+Same as testnet — use a mainnet RPC and fund the operator wallet with real ETH for gas.
 
 > ⚠️ Keep `EVM_OPERATOR_PRIVATE_KEY` secret. Use environment secrets (Fly.io secrets, Vercel env vars) — never commit it.
 
