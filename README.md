@@ -57,7 +57,7 @@ MITATE is a prediction market DApp built on EVM using parimutuel betting mechani
 |-------|------------|
 | Frontend | Next.js 16, React, Tailwind CSS, shadcn/ui |
 | Backend | Hono, Bun, SQLite (WAL mode) |
-| Blockchain | EVM Testnet, viem |
+| Blockchain | EVM (Anvil locally / any EVM testnet), viem |
 | Deployment | Vercel (frontend), Fly.io (backend) |
 
 ## Development
@@ -66,12 +66,130 @@ MITATE is a prediction market DApp built on EVM using parimutuel betting mechani
 
 - [Bun](https://bun.sh) 1.0+
 - Node.js 20+ (for Next.js)
-- EVM Testnet accounts (operator)
+- [Foundry](https://book.getfoundry.sh) (for Anvil local node)
 
-### Option 1: Docker Compose (Recommended)
+### Running Locally with Anvil (Recommended)
+
+[Anvil](https://book.getfoundry.sh/anvil/) is a local EVM node that ships with Foundry. It starts with 10 pre-funded accounts — no faucet or real ETH needed.
+
+#### 1. Install Foundry
 
 ```bash
-# Clone
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Verify:
+
+```bash
+anvil --version
+```
+
+#### 2. Clone and Install
+
+```bash
+git clone https://github.com/thinkshake/mitate.git
+cd mitate
+bun install
+```
+
+#### 3. Start Anvil
+
+In a dedicated terminal:
+
+```bash
+anvil
+```
+
+Anvil starts at `http://127.0.0.1:8545` (Chain ID: 31337) and prints pre-funded accounts:
+
+```
+Available Accounts
+==================
+(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
+
+Private Keys
+==================
+(0) 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+Keep this terminal running throughout development.
+
+#### 4. Configure Environment
+
+**Backend:**
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+Edit `apps/api/.env`:
+
+```env
+PORT=3001
+DATABASE_PATH=./data/mitate.db
+EVM_RPC_URL=http://127.0.0.1:8545
+EVM_CHAIN_ID=31337
+EVM_OPERATOR_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+EVM_OPERATOR_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ADMIN_API_KEY=dev-admin-key
+```
+
+> ⚠️ These are Anvil's well-known dev keys — safe to use locally, **never use in production**.
+
+**Frontend:**
+
+```bash
+echo 'NEXT_PUBLIC_API_URL=http://localhost:3001/api' > apps/web/.env.local
+```
+
+#### 5. Run Database Migrations
+
+```bash
+cd apps/api
+bun run migrate
+cd ../..
+```
+
+#### 6. Start the Services
+
+Open two more terminals:
+
+**Terminal 2 — API:**
+```bash
+cd apps/api
+bun run dev
+```
+
+**Terminal 3 — Web:**
+```bash
+cd apps/web
+bun run dev
+```
+
+#### 7. Verify Everything is Running
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:3001 |
+| Anvil RPC | http://127.0.0.1:8545 |
+
+Quick sanity checks:
+
+```bash
+# API health
+curl http://localhost:3001/api/markets
+
+# Anvil block number
+cast block-number --rpc-url http://127.0.0.1:8545
+```
+
+---
+
+### Option 2: Docker Compose
+
+```bash
 git clone https://github.com/thinkshake/mitate.git
 cd mitate
 
@@ -84,70 +202,52 @@ docker-compose up -d
 
 # View logs
 docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3001
 
-### Option 2: Local Development
+### Option 3: Manual Local (EVM Testnet)
 
 ```bash
-# Clone
 git clone https://github.com/thinkshake/mitate.git
 cd mitate
-
-# Install dependencies
 bun install
 
-# Configure environment
 cp apps/api/.env.example apps/api/.env
-# Edit .env with EVM addresses and API key
+# Edit .env with your testnet RPC URL and operator wallet
 
-# Run database migrations
-cd apps/api && bun run migrate
-
-# Start development servers
-bun run dev  # Starts both frontend and backend
+cd apps/api && bun run migrate && cd ../..
+bun run dev
 ```
 
-### Getting EVM Testnet Accounts
+### Getting Testnet Accounts (Option 3)
 
-You need an EVM Testnet account: **Operator** (holds ETH, receives bets, sends payouts).
+You need an EVM testnet account as **Operator** (holds ETH, receives bets, sends payouts).
 
-1. **Get an account from an EVM Testnet Faucet:**
+1. Get testnet ETH (e.g. Sepolia): https://sepoliafaucet.com  
+   Or generate a wallet: `cast wallet new`
+
+2. Generate an Admin API Key:
    ```bash
-   # Use a faucet for your target EVM testnet, e.g. Sepolia:
-   # https://sepoliafaucet.com
-   # Or generate a wallet using viem/cast and fund from a faucet
-   ```
-
-2. **Save the addresses:**
-   - `EVM_OPERATOR_ADDRESS` = operator wallet address (starts with `0x`)
-   - Keep the private key safe — needed for signing transactions
-
-3. **Generate Admin API Key:**
-   ```bash
-   # Generate a random 32-character key
    openssl rand -hex 16
-   # Or use any secure random string generator
    ```
 
-### Environment Variables
+### Environment Variables Reference
 
 **Backend (apps/api/.env)**
-```
+```env
 PORT=3001
 DATABASE_PATH=./data/mitate.db
-EVM_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
-EVM_OPERATOR_ADDRESS=0xYourOperatorAddress...
-ADMIN_API_KEY=your-secret-key    # From step 3
+EVM_RPC_URL=http://127.0.0.1:8545          # Anvil; or https://sepolia.infura.io/v3/KEY
+EVM_CHAIN_ID=31337                          # Anvil; or 11155111 for Sepolia
+EVM_OPERATOR_ADDRESS=0xYourOperatorAddress
+EVM_OPERATOR_PRIVATE_KEY=0xYourPrivateKey
+ADMIN_API_KEY=your-secret-key
 ```
 
 **Frontend (apps/web/.env.local)**
-```
+```env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
@@ -181,6 +281,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 cd apps/api
 fly launch
 fly secrets set EVM_OPERATOR_ADDRESS=0xXXX...
+fly secrets set EVM_OPERATOR_PRIVATE_KEY=0xXXX...
 fly secrets set ADMIN_API_KEY=your-secret-key
 fly deploy
 ```
