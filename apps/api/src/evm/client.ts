@@ -1,5 +1,5 @@
 /**
- * EVM client utilities for MITATE prediction markets.
+ * EVM client utilities for SENQ prediction markets.
  *
  * Uses viem for type-safe transaction signing and submission.
  */

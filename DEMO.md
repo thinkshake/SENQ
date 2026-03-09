@@ -1,4 +1,4 @@
-# MITATE Demo Guide
+# SENQ Demo Guide
 
 **Hackathon:** JFIIP Demo Day — February 24, 2026
 **Duration:** 3 minutes
@@ -28,7 +28,7 @@ Create `apps/api/.env`:
 ```bash
 PORT=3001
 NODE_ENV=development
-DATABASE_PATH=/data/mitate.db
+DATABASE_PATH=/data/senq.db
 EVM_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
 
 # Operator wallet address (0x...)
@@ -40,7 +40,7 @@ ADMIN_API_KEY=your-secure-admin-key
 ### 2. Start Services
 
 ```bash
-cd ~/dev/mitate
+cd ~/dev/senq
 docker-compose up -d
 
 # Verify
@@ -182,7 +182,7 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 
 ### Opening (0:00 - 0:20)
 
-> "MITATE is a prediction market powered by EVM. It uses native EVM features — ETH transfers, calldata, and multi-sign governance."
+> "SENQ is a prediction market powered by EVM. It uses native EVM features — ETH transfers, calldata, and multi-sign governance."
 
 **Show:** Homepage with markets
 
@@ -223,7 +223,7 @@ curl http://localhost:3001/api/markets/YOUR_MARKET_ID/payouts
 
 ### Closing (2:50 - 3:00)
 
-> "MITATE proves EVM's native primitives can power a complete prediction market — all verifiable on-chain."
+> "SENQ proves EVM's native primitives can power a complete prediction market — all verifiable on-chain."
 
 ---
 

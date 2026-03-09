@@ -36,7 +36,7 @@ app.route("/api/categories", categoriesRoutes);
 // Root endpoint
 app.get("/", (c) => {
   return c.json({
-    name: "MITATE API",
+    name: "SENQ API",
     version: "0.1.0",
     description: "EVM Parimutuel Prediction Market API",
   });
@@ -58,7 +58,7 @@ app.onError((err, c) => {
 
 // Startup
 async function start() {
-  console.log("Starting MITATE API...");
+  console.log("Starting SENQ API...");
 
   const configErrors = validateConfig();
   if (configErrors.length > 0) {
@@ -77,7 +77,7 @@ async function start() {
     process.exit(1);
   }
 
-  console.log(`MITATE API listening on port ${config.port}`);
+  console.log(`SENQ API listening on port ${config.port}`);
 }
 
 function shutdown() {

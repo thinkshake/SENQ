@@ -1,4 +1,4 @@
-# MITATE 見立て
+# SENQ SENQ
 
 > EVM Parimutuel Prediction Market
 
@@ -6,9 +6,9 @@
 
 ## Overview
 
-MITATE is a prediction market DApp built on EVM using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with ETH, and winners share the entire pool proportionally.
+SENQ is a prediction market DApp built on EVM using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with ETH, and winners share the entire pool proportionally.
 
-### What Makes MITATE Special?
+### What Makes SENQ Special?
 
 - **EVM-Native Design**: Uses EVM primitives (ETH transfer, calldata, Multi-Sign)
 - **Parimutuel Pricing**: No complex AMM math — simple pool-based payouts
@@ -88,8 +88,8 @@ anvil --version
 #### 2. Clone and Install
 
 ```bash
-git clone https://github.com/thinkshake/mitate.git
-cd mitate
+git clone https://github.com/thinkshake/senq.git
+cd senq
 bun install
 ```
 
@@ -127,7 +127,7 @@ Edit `apps/api/.env`:
 
 ```env
 PORT=3001
-DATABASE_PATH=./data/mitate.db
+DATABASE_PATH=./data/senq.db
 EVM_RPC_URL=http://127.0.0.1:8545
 EVM_CHAIN_ID=31337
 EVM_OPERATOR_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
@@ -192,8 +192,8 @@ cast block-number --rpc-url http://127.0.0.1:8545
 Anvil is included as a service in `docker-compose.yml` — no separate install needed.
 
 ```bash
-git clone https://github.com/thinkshake/mitate.git
-cd mitate
+git clone https://github.com/thinkshake/senq.git
+cd senq
 
 # Configure the API environment (Anvil keys pre-filled)
 cp apps/api/.env.example apps/api/.env
@@ -218,8 +218,8 @@ docker-compose logs -f
 ### Option 3: Manual Local (EVM Testnet)
 
 ```bash
-git clone https://github.com/thinkshake/mitate.git
-cd mitate
+git clone https://github.com/thinkshake/senq.git
+cd senq
 bun install
 
 cp apps/api/.env.example apps/api/.env
@@ -246,7 +246,7 @@ You need an EVM testnet account as **Operator** (holds ETH, receives bets, sends
 **Backend (apps/api/.env)**
 ```env
 PORT=3001
-DATABASE_PATH=./data/mitate.db
+DATABASE_PATH=./data/senq.db
 EVM_RPC_URL=http://127.0.0.1:8545          # Anvil; or https://sepolia.infura.io/v3/KEY
 EVM_CHAIN_ID=31337                          # Anvil; or 11155111 for Sepolia
 EVM_OPERATOR_ADDRESS=0xYourOperatorAddress

@@ -1,4 +1,4 @@
-# Migrate mitate from XRPL to EVM (no backward compatibility)
+# Migrate senq from XRPL to EVM (no backward compatibility)
 
 ## Goal
 Replace all XRPL logic with EVM logic across the project.
