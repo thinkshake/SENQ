@@ -2,8 +2,6 @@
 
 > EVM Parimutuel Prediction Market
 
-**Demo Day: February 24, 2026** | [JFIIP Hackathon](https://jfiip.xrpl.org)
-
 ## Overview
 
 SENQ is a prediction market DApp built on EVM using parimutuel betting mechanics. Users bet on binary outcomes (YES/NO) with ETH, and winners share the entire pool proportionally.

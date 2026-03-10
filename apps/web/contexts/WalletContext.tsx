@@ -37,9 +37,41 @@ declare global {
   }
 }
 
+// ── Chain config ──────────────────────────────────────────────────
+
+const TARGET_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "31337");
+const TARGET_CHAIN_ID_HEX = `0x${TARGET_CHAIN_ID.toString(16)}`;
+const TARGET_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8545";
+
 // ── Provider ───────────────────────────────────────────────────────
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+async function ensureTargetChain() {
+  if (!window.ethereum) return;
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: TARGET_CHAIN_ID_HEX }],
+    });
+  } catch (switchError: unknown) {
+    if ((switchError as { code?: number }).code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: TARGET_CHAIN_ID_HEX,
+            chainName: "Anvil Local",
+            rpcUrls: [TARGET_RPC_URL],
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          },
+        ],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WalletState>({
@@ -108,6 +140,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         throw new Error("MetaMask is not installed. Please install it from metamask.io");
       }
 
+      await ensureTargetChain();
+
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       }) as string[];
@@ -117,8 +151,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
 
       const address = accounts[0];
-      const chainIdHex = await window.ethereum.request({ method: "eth_chainId" }) as string;
-      const network = parseInt(chainIdHex, 16).toString();
+      const network = TARGET_CHAIN_ID.toString();
 
       localStorage.setItem("senq_wallet", JSON.stringify({ address, network }));
 
@@ -163,6 +196,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
+        await ensureTargetChain();
+
         const hash = await window.ethereum.request({
           method: "eth_sendTransaction",
           params: [tx],
