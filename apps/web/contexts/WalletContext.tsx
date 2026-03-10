@@ -74,7 +74,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
     if (isInstalled) {
       // Try to restore session
-      const saved = localStorage.getItem("mitate_wallet");
+      const saved = localStorage.getItem("senq_wallet");
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -87,7 +87,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             }));
           }
         } catch {
-          localStorage.removeItem("mitate_wallet");
+          localStorage.removeItem("senq_wallet");
         }
       }
     }
@@ -120,7 +120,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const chainIdHex = await window.ethereum.request({ method: "eth_chainId" }) as string;
       const network = parseInt(chainIdHex, 16).toString();
 
-      localStorage.setItem("mitate_wallet", JSON.stringify({ address, network }));
+      localStorage.setItem("senq_wallet", JSON.stringify({ address, network }));
 
       setState({
         connected: true,
@@ -141,7 +141,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const disconnect = useCallback(() => {
-    localStorage.removeItem("mitate_wallet");
+    localStorage.removeItem("senq_wallet");
     setState((s) => ({
       ...s,
       connected: false,

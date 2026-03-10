@@ -13,7 +13,7 @@ export function MarketDetailHeader({ balance }: { balance: number }) {
     <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 lg:px-6">
         <Link href="/" className="font-mono text-lg font-bold tracking-[0.2em] text-foreground">
-          MITATE
+          SENQ
         </Link>
 
         <nav className="flex gap-6" aria-label="メインナビゲーション">

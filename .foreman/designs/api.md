@@ -1,7 +1,7 @@
 # API Design
 
 ## Base URL
-`http://localhost:3001` (dev) / `https://api.mitate.app` (prod)
+`http://localhost:3001` (dev) / `https://api.senq.app` (prod)
 
 ## Endpoints
 

@@ -38,7 +38,7 @@ import {
   fetchCategories,
 } from "@/lib/api";
 
-const ADMIN_KEY_STORAGE = "mitate-admin-key";
+const ADMIN_KEY_STORAGE = "senq-admin-key";
 
 function getStoredKey(): string {
   if (typeof window === "undefined") return "";

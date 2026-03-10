@@ -52,4 +52,8 @@ next-env.d.ts
 apps/web/.next
 **/. next
 
+# Foundry
+contracts/out/
+contracts/cache/
+
 account.text

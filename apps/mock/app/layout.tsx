@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
 
 export const metadata: Metadata = {
-  title: 'MITATE — 予測マーケット',
+  title: 'SENQ — 予測マーケット',
   description: '日本初の属性重み付け型予測マーケット',
 }
 

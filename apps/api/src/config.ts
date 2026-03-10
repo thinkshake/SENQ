@@ -9,7 +9,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
 
   /** SQLite database path */
-  databasePath: process.env.DATABASE_PATH || "./data/mitate.db",
+  databasePath: process.env.DATABASE_PATH || "./data/senq.db",
 
   /** EVM JSON-RPC endpoint */
   evmRpcUrl: process.env.EVM_RPC_URL || "http://localhost:8545",
@@ -22,6 +22,9 @@ export const config = {
 
   /** Market operator private key (for auto-payouts) */
   operatorPrivateKey: process.env.EVM_OPERATOR_PRIVATE_KEY || "",
+
+  /** SENQMarket contract address */
+  evmContractAddress: process.env.EVM_CONTRACT_ADDRESS || "",
 
   /** Admin API key for privileged operations */
   adminApiKey: process.env.ADMIN_API_KEY || "",

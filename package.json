@@ -1,5 +1,5 @@
 {
-  "name": "mitate",
+  "name": "senq",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -7,11 +7,11 @@
   ],
   "scripts": {
     "dev": "bun run --filter '*' dev",
-    "dev:web": "bun run --filter @mitate/web dev",
-    "dev:api": "bun run --filter @mitate/api dev",
+    "dev:web": "bun run --filter @senq/web dev",
+    "dev:api": "bun run --filter @senq/api dev",
     "build": "bun run --filter '*' build",
-    "build:web": "bun run --filter @mitate/web build",
-    "build:api": "bun run --filter @mitate/api build",
+    "build:web": "bun run --filter @senq/web build",
+    "build:api": "bun run --filter @senq/api build",
     "lint": "bun run --filter '*' lint"
   }
 }

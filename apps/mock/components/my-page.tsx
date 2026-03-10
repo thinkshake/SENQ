@@ -68,7 +68,7 @@ export function MyPage() {
       </main>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        <span className="font-mono tracking-wide">MITATE</span>
+        <span className="font-mono tracking-wide">SENQ</span>
         {" — "}
         予測マーケットプラットフォーム
       </footer>
