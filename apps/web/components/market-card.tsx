@@ -1,6 +1,11 @@
+"use client"
+
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { type Market, formatEth, formatDeadline } from "@/lib/api"
+import { type Market, formatEth } from "@/lib/api"
+import { useT } from "@/contexts/LanguageContext"
+import { useLanguage } from "@/contexts/LanguageContext"
+import { formatDeadlineLocale } from "@/lib/format"
 
 function ProbabilityBar({ label, probability }: { label: string; probability: number }) {
   return (
@@ -22,10 +27,11 @@ function ProbabilityBar({ label, probability }: { label: string; probability: nu
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useT()
   const config: Record<string, { label: string; className: string }> = {
-    open: { label: "オープン", className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400" },
-    closed: { label: "クローズ", className: "border-border bg-secondary text-muted-foreground" },
-    resolved: { label: "解決済み", className: "border-border bg-secondary text-muted-foreground" },
+    open: { label: t.marketCard.statusOpen, className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400" },
+    closed: { label: t.marketCard.statusClosed, className: "border-border bg-secondary text-muted-foreground" },
+    resolved: { label: t.marketCard.statusResolved, className: "border-border bg-secondary text-muted-foreground" },
   }
 
   const { label, className } = config[status] ?? { label: status, className: "border-border bg-secondary text-muted-foreground" }
@@ -38,6 +44,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function MarketCard({ market }: { market: Market }) {
+  const t = useT()
+  const { locale } = useLanguage()
   const topOutcomes = [...market.outcomes]
     .sort((a, b) => b.probability - a.probability)
     .slice(0, 2)
@@ -46,7 +54,7 @@ export function MarketCard({ market }: { market: Market }) {
     <Link href={`/market/${market.id}`}>
       <article
         className="group cursor-pointer rounded-lg border border-border bg-card p-5 transition-all hover:border-foreground/30 hover:shadow-sm"
-        aria-label={`マーケット: ${market.title}`}
+        aria-label={t.marketCard.marketAria(market.title)}
       >
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
@@ -71,10 +79,10 @@ export function MarketCard({ market }: { market: Market }) {
 
         <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">
-            総取引量: <span className="font-mono">{formatEth(market.totalPoolWei)}</span>
+            {t.marketCard.totalVolume} <span className="font-mono">{formatEth(market.totalPoolWei)}</span>
           </span>
           <span className="text-xs text-muted-foreground">
-            {formatDeadline(market.bettingDeadline)}
+            {formatDeadlineLocale(market.bettingDeadline, t.format)}
           </span>
         </div>
       </article>

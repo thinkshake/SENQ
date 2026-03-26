@@ -2,6 +2,7 @@
 
 import { useWallet } from "@/contexts/WalletContext"
 import { useUser } from "@/contexts/UserContext"
+import { useT } from "@/contexts/LanguageContext"
 import { ProfileSection } from "@/components/profile-section"
 import { AttributeManagement } from "@/components/attribute-management"
 import { ActiveBets } from "@/components/active-bets"
@@ -9,20 +10,21 @@ import { ActiveBets } from "@/components/active-bets"
 export default function MyPage() {
   const wallet = useWallet()
   const user = useUser()
+  const t = useT()
 
   if (!wallet.connected) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center lg:px-6">
-        <h1 className="text-xl font-bold text-foreground">マイページ</h1>
+        <h1 className="text-xl font-bold text-foreground">{t.myPage.title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          ウォレットを接続してポートフォリオを確認しましょう
+          {t.myPage.connectPrompt}
         </p>
         <button
           onClick={wallet.connect}
           disabled={wallet.loading}
           className="mt-6 rounded-md bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
         >
-          {wallet.loading ? "接続中..." : "ウォレット接続"}
+          {wallet.loading ? t.myPage.connectingDots : t.myPage.connectWallet}
         </button>
       </div>
     )

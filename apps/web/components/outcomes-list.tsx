@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { type Outcome, formatEth } from "@/lib/api"
+import { useT } from "@/contexts/LanguageContext"
 
 type OutcomesListProps = {
   outcomes: Outcome[]
@@ -14,10 +15,12 @@ export function OutcomesList({
   selectedOutcomeId,
   onSelect,
 }: OutcomesListProps) {
+  const t = useT()
+
   return (
     <section className="mt-8">
       <h2 className="text-sm font-medium text-foreground">
-        選択肢と現在の確率
+        {t.outcomesList.title}
       </h2>
 
       <div className="mt-4 flex flex-col gap-2">

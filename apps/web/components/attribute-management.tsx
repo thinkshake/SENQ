@@ -3,12 +3,10 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import type { Attribute } from "@/lib/api"
+import { useT, useLanguage } from "@/contexts/LanguageContext"
+import { getDateLocale } from "@/lib/format"
 
-const typeOptions = [
-  { value: "region", label: "地域", typeLabel: "地域" },
-  { value: "expertise", label: "専門知識", typeLabel: "専門知識" },
-  { value: "experience", label: "経験", typeLabel: "経験" },
-] as const
+const typeKeys = ["region", "expertise", "experience"] as const
 
 const defaultWeights: Record<string, number> = {
   region: 1.3,
@@ -27,11 +25,20 @@ export function AttributeManagement({
   onDelete,
   onAdd,
 }: AttributeManagementProps) {
+  const t = useT()
+  const { locale } = useLanguage()
+  const dateLocale = getDateLocale(locale)
+
   const [showForm, setShowForm] = useState(false)
   const [formType, setFormType] = useState<string>("region")
   const [formLabel, setFormLabel] = useState("")
 
-  const selectedTypeOption = typeOptions.find((t) => t.value === formType)
+  const typeLabels: Record<string, string> = {
+    region: t.attributeManagement.typeRegion,
+    expertise: t.attributeManagement.typeExpertise,
+    experience: t.attributeManagement.typeExperience,
+  }
+
   const previewWeight = defaultWeights[formType] ?? 1.0
 
   function handleSubmit() {
@@ -47,10 +54,10 @@ export function AttributeManagement({
   }
 
   return (
-    <section aria-label="属性管理" className="mt-10">
-      <h2 className="text-lg font-bold text-foreground">あなたの属性</h2>
+    <section aria-label={t.attributeManagement.title} className="mt-10">
+      <h2 className="text-lg font-bold text-foreground">{t.attributeManagement.title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        属性はマーケットの予測精度に影響する重みスコアの根拠となります
+        {t.attributeManagement.description}
       </p>
 
       <div className="mt-6 flex flex-col gap-3">
@@ -71,7 +78,7 @@ export function AttributeManagement({
               </span>
               {attr.verifiedAt && (
                 <span className="text-xs text-muted-foreground">
-                  {new Date(attr.verifiedAt).toLocaleDateString("ja-JP")} 認証済み
+                  {new Date(attr.verifiedAt).toLocaleDateString(dateLocale)} {t.attributeManagement.verified}
                 </span>
               )}
             </div>
@@ -79,14 +86,14 @@ export function AttributeManagement({
               onClick={() => onDelete(attr.id)}
               className="shrink-0 text-xs text-destructive transition-opacity hover:opacity-70"
             >
-              削除
+              {t.attributeManagement.delete}
             </button>
           </div>
         ))}
 
         {attributes.length === 0 && (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            属性がまだ登録されていません
+            {t.attributeManagement.noAttributes}
           </p>
         )}
       </div>
@@ -96,14 +103,14 @@ export function AttributeManagement({
           onClick={() => setShowForm(true)}
           className="mt-4 rounded border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
         >
-          属性を追加
+          {t.attributeManagement.addAttribute}
         </button>
       ) : (
         <div className="mt-4 rounded-lg border border-border p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="attr-type" className="text-xs text-muted-foreground">
-                タイプ
+                {t.attributeManagement.typeLabel}
               </label>
               <select
                 id="attr-type"
@@ -111,9 +118,9 @@ export function AttributeManagement({
                 onChange={(e) => setFormType(e.target.value)}
                 className="rounded border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-foreground"
               >
-                {typeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {typeKeys.map((key) => (
+                  <option key={key} value={key}>
+                    {typeLabels[key]}
                   </option>
                 ))}
               </select>
@@ -121,14 +128,14 @@ export function AttributeManagement({
 
             <div className="flex flex-1 flex-col gap-1.5">
               <label htmlFor="attr-label" className="text-xs text-muted-foreground">
-                ラベル
+                {t.attributeManagement.labelLabel}
               </label>
               <input
                 id="attr-label"
                 type="text"
                 value={formLabel}
                 onChange={(e) => setFormLabel(e.target.value)}
-                placeholder="例: 東京都在住"
+                placeholder={t.attributeManagement.labelPlaceholder}
                 className="rounded border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-foreground"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSubmit()
@@ -137,7 +144,7 @@ export function AttributeManagement({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs text-muted-foreground">重み</span>
+              <span className="text-xs text-muted-foreground">{t.attributeManagement.weightLabel}</span>
               <span className="rounded border border-border bg-muted px-3 py-2 font-mono text-sm text-foreground">
                 {"\u00D7"}{previewWeight.toFixed(1)}
               </span>
@@ -152,7 +159,7 @@ export function AttributeManagement({
                   !formLabel.trim() ? "cursor-not-allowed opacity-40" : "hover:opacity-80"
                 )}
               >
-                追加する
+                {t.attributeManagement.add}
               </button>
               <button
                 onClick={() => {
@@ -161,7 +168,7 @@ export function AttributeManagement({
                 }}
                 className="rounded border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                キャンセル
+                {t.attributeManagement.cancel}
               </button>
             </div>
           </div>
@@ -170,9 +177,7 @@ export function AttributeManagement({
 
       <div className="mt-6 rounded-lg border border-border bg-muted/50 px-5 py-4">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          重みスコアの計算方法: 基本スコア1.0に各属性の重み係数から1.0を引いた値を加算します。
-          地域属性: {"\u00D7"}1.3、専門知識: {"\u00D7"}1.0、経験: {"\u00D7"}0.8
-          （スコア範囲: 0.5〜3.0）
+          {t.attributeManagement.weightExplanation}
         </p>
       </div>
     </section>

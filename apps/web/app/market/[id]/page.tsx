@@ -4,6 +4,7 @@ import { use, useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useMarket } from "@/hooks/useMarkets"
 import { useWallet } from "@/contexts/WalletContext"
+import { useT } from "@/contexts/LanguageContext"
 import { OutcomesList } from "@/components/outcomes-list"
 import { BetPanel } from "@/components/bet-panel"
 import { MarketInfoBox } from "@/components/market-info-box"
@@ -22,6 +23,7 @@ export default function MarketDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const { market, loading, error, refetch } = useMarket(id)
   const wallet = useWallet()
+  const t = useT()
 
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string | null>(null)
   const [recentBets, setRecentBets] = useState<Bet[]>([])
@@ -84,23 +86,23 @@ export default function MarketDetailPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center lg:px-6">
         <h1 className="text-xl font-bold text-foreground">
-          {error || "マーケットが見つかりません"}
+          {error || t.marketDetail.notFound}
         </h1>
         <Link
           href="/"
           className="mt-4 inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          {"← マーケット一覧に戻る"}
+          {t.marketDetail.backToList}
         </Link>
       </div>
     )
   }
 
   const statusConfig: Record<string, { label: string; className: string }> = {
-    Open: { label: "オープン", className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400" },
-    Closed: { label: "クローズ", className: "border-border bg-secondary text-muted-foreground" },
-    Resolved: { label: "解決済み", className: "border-border bg-secondary text-muted-foreground" },
-    Draft: { label: "下書き", className: "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-400" },
+    Open: { label: t.marketDetail.statusOpen, className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400" },
+    Closed: { label: t.marketDetail.statusClosed, className: "border-border bg-secondary text-muted-foreground" },
+    Resolved: { label: t.marketDetail.statusResolved, className: "border-border bg-secondary text-muted-foreground" },
+    Draft: { label: t.marketDetail.statusDraft, className: "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-400" },
   }
 
   const status = statusConfig[market.status] ?? { label: market.status, className: "border-border bg-secondary text-muted-foreground" }
@@ -112,7 +114,7 @@ export default function MarketDetailPage({ params }: PageProps) {
         href="/"
         className="inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        {"← マーケット一覧"}
+        {t.marketDetail.backToListShort}
       </Link>
 
       <div className="mt-6 flex flex-col gap-8 lg:flex-row">
@@ -146,7 +148,7 @@ export default function MarketDetailPage({ params }: PageProps) {
           {/* Recent Bets */}
           {recentBets.length > 0 && (
             <div className="mt-8 border-t border-border pt-6">
-              <h3 className="text-sm font-medium text-foreground">最近のベット</h3>
+              <h3 className="text-sm font-medium text-foreground">{t.marketDetail.recentBets}</h3>
               <div className="mt-3 flex flex-col gap-2">
                 {recentBets.slice(0, 5).map((bet) => (
                   <div
@@ -182,11 +184,11 @@ export default function MarketDetailPage({ params }: PageProps) {
           ) : (
             <div className="rounded-lg border border-border bg-card p-5 text-center">
               <p className="text-sm text-muted-foreground">
-                このマーケットは{status.label}です
+                {t.marketDetail.marketIs(status.label)}
               </p>
               {market.resolvedOutcomeId && (
                 <p className="mt-2 text-base font-semibold text-foreground">
-                  結果: {market.outcomes.find((o) => o.id === market.resolvedOutcomeId)?.label}
+                  {t.marketDetail.result} {market.outcomes.find((o) => o.id === market.resolvedOutcomeId)?.label}
                 </p>
               )}
             </div>

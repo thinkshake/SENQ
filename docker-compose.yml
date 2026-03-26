@@ -27,6 +27,7 @@ services:
     env_file:
       - ./apps/api/.env
     environment:
+      - DATABASE_PATH=/data/senq.db
       - EVM_RPC_URL=http://anvil:8545
       - EVM_CHAIN_ID=31337
     volumes:

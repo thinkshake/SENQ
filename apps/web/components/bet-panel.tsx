@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { useWallet } from "@/contexts/WalletContext"
 import { useUser } from "@/contexts/UserContext"
+import { useT } from "@/contexts/LanguageContext"
 import {
   type Outcome,
   placeBet,
@@ -29,6 +30,7 @@ export function BetPanel({
 }: BetPanelProps) {
   const wallet = useWallet()
   const user = useUser()
+  const t = useT()
 
   const [amount, setAmount] = useState(0)
   const [inputValue, setInputValue] = useState("")
@@ -67,19 +69,19 @@ export function BetPanel({
     }
 
     if (!selectedOutcome) {
-      setError("選択肢を選んでください")
+      setError(t.betPanel.selectOutcomeError)
       setTimeout(() => setError(null), 3000)
       return
     }
 
     if (amount <= 0) {
-      setError("金額を入力してください")
+      setError(t.betPanel.enterAmountError)
       setTimeout(() => setError(null), 3000)
       return
     }
 
     if (insufficientBalance) {
-      setError("残高が不足しています")
+      setError(t.betPanel.insufficientBalance)
       setTimeout(() => setError(null), 3000)
       return
     }
@@ -101,7 +103,7 @@ export function BetPanel({
       // Submit EVM payment transaction via MetaMask
       const txResult = await wallet.signAndSubmitTransaction(result.unsignedTx)
       if (!txResult?.hash) {
-        throw new Error("トランザクションが拒否されました")
+        throw new Error(t.betPanel.txRejected)
       }
 
       // Confirm bet on server
@@ -113,25 +115,25 @@ export function BetPanel({
       onBetPlaced()
       setTimeout(() => setBetConfirmed(false), 2500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ベットに失敗しました")
+      setError(err instanceof Error ? err.message : t.betPanel.betFailed)
       setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
-  }, [isNotConnected, selectedOutcome, amount, wallet, marketId, onBetPlaced, insufficientBalance])
+  }, [isNotConnected, selectedOutcome, amount, wallet, marketId, onBetPlaced, insufficientBalance, t])
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       {/* Outcome Selection Display */}
       <div className="mb-5">
-        <span className="text-xs text-muted-foreground">選択中</span>
+        <span className="text-xs text-muted-foreground">{t.betPanel.selected}</span>
         {selectedOutcome ? (
           <p className="mt-1 text-sm font-medium text-foreground">
             {selectedOutcome.label}
           </p>
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">
-            選択肢をクリックしてください
+            {t.betPanel.selectOutcome}
           </p>
         )}
       </div>
@@ -142,7 +144,7 @@ export function BetPanel({
           htmlFor="bet-amount"
           className="block text-xs font-medium text-foreground"
         >
-          ベット金額 (ETH)
+          {t.betPanel.betAmount}
         </label>
         <input
           id="bet-amount"
@@ -176,12 +178,12 @@ export function BetPanel({
 
         {wallet.connected && (
           <p className="mt-2 text-xs text-muted-foreground">
-            利用可能:{" "}
+            {t.betPanel.available}{" "}
             <span className="font-mono">
-              {wallet.balance ? formatEth(wallet.balance) : "読み込み中..."}
+              {wallet.balance ? formatEth(wallet.balance) : t.betPanel.loading}
             </span>
             {insufficientBalance && (
-              <span className="ml-2 text-destructive">（残高不足）</span>
+              <span className="ml-2 text-destructive">{t.betPanel.insufficientShort}</span>
             )}
           </p>
         )}
@@ -190,10 +192,10 @@ export function BetPanel({
       {/* Weight Display */}
       <div className="mt-5 border-t border-border pt-5">
         <span className="text-xs font-medium text-foreground">
-          あなたの重みスコア
+          {t.betPanel.yourWeightScore}
         </span>
         <p className="mt-2 font-mono text-3xl font-bold text-foreground">
-          {"×"}{weightScore.toFixed(1)}
+          {"\u00d7"}{weightScore.toFixed(1)}
         </p>
 
         {user.attributes.length > 0 && (
@@ -205,7 +207,7 @@ export function BetPanel({
               >
                 {attr.label}
                 <span className="font-mono text-muted-foreground">
-                  {"×"}{attr.weight}
+                  {"\u00d7"}{attr.weight}
                 </span>
               </span>
             ))}
@@ -213,7 +215,7 @@ export function BetPanel({
         )}
 
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          属性がマーケットに関連する場合、予測の重みが増加します
+          {t.betPanel.weightDescription}
         </p>
       </div>
 
@@ -221,21 +223,21 @@ export function BetPanel({
       {amount > 0 && selectedOutcome && (
         <div className="mt-5 border-t border-border pt-5">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">ベット金額</span>
+            <span className="text-muted-foreground">{t.betPanel.betAmountLabel}</span>
             <span className="font-mono text-foreground">
               {amount} ETH
             </span>
           </div>
           <div className="mt-1.5 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">重みスコア</span>
+            <span className="text-muted-foreground">{t.betPanel.weightScoreLabel}</span>
             <span className="font-mono text-foreground">
-              {"×"}{weightScore.toFixed(1)}
+              {"\u00d7"}{weightScore.toFixed(1)}
             </span>
           </div>
           <div className="my-3 border-t border-border" />
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">
-              実効ベット額
+              {t.betPanel.effectiveBet}
             </span>
             <span className="font-mono text-base font-bold text-foreground">
               {effectiveAmount} ETH
@@ -269,12 +271,12 @@ export function BetPanel({
         )}
       >
         {loading
-          ? "処理中..."
+          ? t.betPanel.processing
           : betConfirmed
-          ? "予測が完了しました \u2713"
+          ? t.betPanel.betCompleted
           : isNotConnected
-          ? "ウォレット接続"
-          : "予測する"}
+          ? t.betPanel.connectWallet
+          : t.betPanel.predict}
       </button>
     </div>
   )

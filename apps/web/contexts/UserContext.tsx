@@ -89,7 +89,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       setState((s) => ({
         ...s,
-        error: err instanceof Error ? err.message : "属性の追加に失敗しました",
+        error: err instanceof Error ? err.message : "ATTR_ADD_FAILED",
       }));
     }
   }, [address, fetchUser]);
@@ -102,7 +102,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       setState((s) => ({
         ...s,
-        error: err instanceof Error ? err.message : "属性の削除に失敗しました",
+        error: err instanceof Error ? err.message : "ATTR_DELETE_FAILED",
       }));
     }
   }, [address, fetchUser]);

@@ -1,4 +1,7 @@
+"use client"
+
 import { formatEth } from "@/lib/api"
+import { useT } from "@/contexts/LanguageContext"
 
 type Position = {
   outcomeLabel: string
@@ -12,10 +15,12 @@ type PositionBoxProps = {
 }
 
 export function PositionBox({ positions }: PositionBoxProps) {
+  const t = useT()
+
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <h3 className="text-sm font-medium text-foreground">
-        あなたのポジション
+        {t.positionBox.title}
       </h3>
 
       <div className="mt-4 flex flex-col gap-4">
@@ -29,19 +34,19 @@ export function PositionBox({ positions }: PositionBoxProps) {
             </p>
             <div className="mt-2 flex flex-col gap-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">ベット額</span>
+                <span className="text-muted-foreground">{t.positionBox.betAmount}</span>
                 <span className="font-mono text-foreground">
                   {formatEth(pos.amountWei)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">重みスコア</span>
+                <span className="text-muted-foreground">{t.positionBox.weightScore}</span>
                 <span className="font-mono text-foreground">
-                  {"×"}{pos.weightScore.toFixed(1)}
+                  {"\u00d7"}{pos.weightScore.toFixed(1)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">実効ベット額</span>
+                <span className="text-muted-foreground">{t.positionBox.effectiveBet}</span>
                 <span className="font-mono font-medium text-foreground">
                   {formatEth(pos.effectiveAmountWei)}
                 </span>

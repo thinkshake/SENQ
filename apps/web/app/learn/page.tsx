@@ -1,52 +1,27 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
 
-const guides = [
-  {
-    title: "What are Event Contracts?",
-    description:
-      "Learn about the basics of trading on real-world events and how contracts work.",
-    icon: "📚",
-  },
-  {
-    title: "How to Place Your First Trade",
-    description:
-      "Step-by-step guide to buying and selling contracts on SENQ.",
-    icon: "🎯",
-  },
-  {
-    title: "Understanding Risk",
-    description:
-      "Learn about the risks involved in trading and how to manage your portfolio.",
-    icon: "⚠️",
-  },
-  {
-    title: "Market Resolution",
-    description:
-      "How markets are resolved and when you get paid out on winning positions.",
-    icon: "✅",
-  },
-  {
-    title: "Advanced Strategies",
-    description:
-      "Tips and strategies for more experienced traders looking to optimize returns.",
-    icon: "🧠",
-  },
-  {
-    title: "FAQ",
-    description:
-      "Frequently asked questions about SENQ and prediction markets.",
-    icon: "❓",
-  },
-];
+import { Card, CardContent } from "@/components/ui/card";
+import { useT } from "@/contexts/LanguageContext";
 
 export default function LearnPage() {
+  const t = useT();
+
+  const guides = [
+    { ...t.learn.guides.eventContracts, icon: "\ud83d\udcda" },
+    { ...t.learn.guides.firstTrade, icon: "\ud83c\udfaf" },
+    { ...t.learn.guides.risk, icon: "\u26a0\ufe0f" },
+    { ...t.learn.guides.resolution, icon: "\u2705" },
+    { ...t.learn.guides.strategies, icon: "\ud83e\udde0" },
+    { ...t.learn.guides.faq, icon: "\u2753" },
+  ];
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-black mb-2">Learn</h1>
+        <h1 className="text-3xl font-bold text-black mb-2">{t.learn.title}</h1>
         <p className="text-gray-600">
-          Understand how prediction markets work and become a better trader
+          {t.learn.subtitle}
         </p>
       </div>
 
@@ -68,7 +43,7 @@ export default function LearnPage() {
 
       {/* Video Section */}
       <div className="mt-12">
-        <h2 className="text-2xl font-bold text-black mb-6">Video Tutorials</h2>
+        <h2 className="text-2xl font-bold text-black mb-6">{t.learn.videoTutorials}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border border-gray-200">
             <CardContent className="p-0">
@@ -93,12 +68,12 @@ export default function LearnPage() {
                       d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Video placeholder
+                  {t.learn.videoPlaceholder}
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-black">Getting Started with SENQ</h3>
-                <p className="text-sm text-gray-500">5 min • Beginner</p>
+                <h3 className="font-semibold text-black">{t.learn.gettingStarted}</h3>
+                <p className="text-sm text-gray-500">{t.learn.gettingStartedMeta}</p>
               </div>
             </CardContent>
           </Card>
@@ -125,12 +100,12 @@ export default function LearnPage() {
                       d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  Video placeholder
+                  {t.learn.videoPlaceholder}
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-black">Understanding Market Prices</h3>
-                <p className="text-sm text-gray-500">8 min • Intermediate</p>
+                <h3 className="font-semibold text-black">{t.learn.marketPrices}</h3>
+                <p className="text-sm text-gray-500">{t.learn.marketPricesMeta}</p>
               </div>
             </CardContent>
           </Card>

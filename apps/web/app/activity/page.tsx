@@ -6,19 +6,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/contexts/WalletContext";
 import { useUser } from "@/contexts/UserContext";
+import { useT, useLanguage } from "@/contexts/LanguageContext";
 import { formatEth } from "@/lib/api";
+import { getDateLocale } from "@/lib/format";
 
 export default function ActivityPage() {
   const wallet = useWallet();
   const user = useUser();
+  const t = useT();
+  const { locale } = useLanguage();
+  const dateLocale = getDateLocale(locale);
 
   if (!wallet.connected) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
-          <h1 className="text-2xl font-bold mb-4">ウォレットを接続</h1>
+          <h1 className="text-2xl font-bold mb-4">{t.activity.connectWallet}</h1>
           <p className="text-muted-foreground mb-8">
-            MetaMaskを接続してアクティビティ履歴を確認しましょう。
+            {t.activity.connectPrompt}
           </p>
           {!wallet.metaMaskInstalled ? (
             <a
@@ -27,7 +32,7 @@ export default function ActivityPage() {
               rel="noopener noreferrer"
             >
               <Button className="w-full" size="lg">
-                MetaMaskをインストール
+                {t.activity.installMetaMask}
               </Button>
             </a>
           ) : (
@@ -37,7 +42,7 @@ export default function ActivityPage() {
               className="w-full"
               size="lg"
             >
-              {wallet.loading ? "接続中..." : "MetaMaskを接続"}
+              {wallet.loading ? t.activity.connectingDots : t.activity.connectMetaMask}
             </Button>
           )}
         </div>
@@ -51,14 +56,14 @@ export default function ActivityPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">アクティビティ</h1>
-        <p className="text-muted-foreground">ベット履歴</p>
+        <h1 className="text-3xl font-bold mb-2">{t.activity.title}</h1>
+        <p className="text-muted-foreground">{t.activity.betHistory}</p>
       </div>
 
       {/* Activity List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">最近のアクティビティ</CardTitle>
+          <CardTitle className="text-lg">{t.activity.recentActivity}</CardTitle>
         </CardHeader>
         <CardContent>
           {user.loading ? (
@@ -69,9 +74,9 @@ export default function ActivityPage() {
             </div>
           ) : bets.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="mb-4">まだアクティビティがありません</p>
+              <p className="mb-4">{t.activity.noActivity}</p>
               <Link href="/markets">
-                <Button>最初のベットをする</Button>
+                <Button>{t.activity.placeFirstBet}</Button>
               </Link>
             </div>
           ) : (
@@ -92,7 +97,7 @@ export default function ActivityPage() {
                       <Badge variant="secondary">{bet.outcomeLabel}</Badge>
                       {bet.weightScore > 1 && (
                         <Badge variant="outline">
-                          ×{bet.weightScore.toFixed(1)}
+                          &times;{bet.weightScore.toFixed(1)}
                         </Badge>
                       )}
                     </div>
@@ -102,7 +107,7 @@ export default function ActivityPage() {
                       {formatEth(bet.amountWei)}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(bet.createdAt).toLocaleDateString("ja-JP")}
+                      {new Date(bet.createdAt).toLocaleDateString(dateLocale)}
                     </div>
                   </div>
                 </div>

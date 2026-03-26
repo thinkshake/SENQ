@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/contexts/WalletContext";
+import { useT, useLanguage } from "@/contexts/LanguageContext";
+import { getDateLocale } from "@/lib/format";
 import type { Market } from "@/lib/api";
 import {
   adminGetMarkets,
@@ -45,32 +47,17 @@ function getStoredKey(): string {
   return localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
 }
 
-// ── Status helpers ──────────────────────────────────────────────
-
-const statusLabel: Record<string, string> = {
-  Draft: "下書き",
-  Open: "公開中",
-  Closed: "締切",
-  Resolved: "確定済",
-};
-
-const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  Draft: "outline",
-  Open: "default",
-  Closed: "secondary",
-  Resolved: "destructive",
-};
-
 // ── Auth gate ───────────────────────────────────────────────────
 
 function AdminAuth({ onAuth }: { onAuth: (key: string) => void }) {
   const [key, setKey] = useState("");
+  const t = useT();
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>管理画面</CardTitle>
+          <CardTitle>{t.admin.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -87,7 +74,7 @@ function AdminAuth({ onAuth }: { onAuth: (key: string) => void }) {
               onChange={(e) => setKey(e.target.value)}
             />
             <Button type="submit" disabled={!key.trim()}>
-              ログイン
+              {t.admin.login}
             </Button>
           </form>
         </CardContent>
@@ -108,6 +95,7 @@ function CreateMarketDialog({
   onCreated: () => void;
 }) {
   const { toast } = useToast();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -134,7 +122,7 @@ function CreateMarketDialog({
   async function handleCreate() {
     const filteredOutcomes = outcomes.filter((o) => o.trim());
     if (!title.trim() || !deadline || filteredOutcomes.length < 2) {
-      toast({ title: "入力エラー", description: "必須項目を入力してください", variant: "destructive" });
+      toast({ title: t.admin.inputError, description: t.admin.fillRequired, variant: "destructive" });
       return;
     }
 
@@ -150,13 +138,13 @@ function CreateMarketDialog({
         outcomes: filteredOutcomes.map((label) => ({ label: label.trim() })),
       });
 
-      toast({ title: "成功", description: "マーケットを公開しました！" });
+      toast({ title: t.admin.success, description: t.admin.marketPublished });
       handleClose();
       onCreated();
     } catch (err) {
       toast({
-        title: "エラー",
-        description: err instanceof Error ? err.message : "作成に失敗しました",
+        title: t.admin.error,
+        description: err instanceof Error ? err.message : t.admin.createFailed,
         variant: "destructive",
       });
     } finally {
@@ -167,30 +155,30 @@ function CreateMarketDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}>
       <DialogTrigger asChild>
-        <Button>マーケット作成</Button>
+        <Button>{t.admin.createMarket}</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>新規マーケット作成</DialogTitle>
-          <DialogDescription>マーケットの情報を入力してください</DialogDescription>
+          <DialogTitle>{t.admin.newMarket}</DialogTitle>
+          <DialogDescription>{t.admin.enterMarketInfo}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">
-            <Label>タイトル *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="マーケットのタイトル" />
+            <Label>{t.admin.titleLabel}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t.admin.titlePlaceholder} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>説明</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="説明文" />
+            <Label>{t.admin.descriptionLabel}</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.admin.descriptionPlaceholder} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>カテゴリ</Label>
+            <Label>{t.admin.categoryLabel}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="選択してください" />
+                <SelectValue placeholder={t.admin.categoryPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
@@ -203,12 +191,12 @@ function CreateMarketDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>締切日時 *</Label>
+            <Label>{t.admin.deadlineLabel}</Label>
             <Input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>アウトカム * (最低2つ)</Label>
+            <Label>{t.admin.outcomesLabel}</Label>
             {outcomes.map((o, i) => (
               <div key={i} className="flex gap-2">
                 <Input
@@ -218,7 +206,7 @@ function CreateMarketDialog({
                     next[i] = e.target.value;
                     setOutcomes(next);
                   }}
-                  placeholder={`選択肢 ${i + 1}`}
+                  placeholder={t.admin.outcomePlaceholder(i + 1)}
                 />
                 {outcomes.length > 2 && (
                   <Button
@@ -227,14 +215,14 @@ function CreateMarketDialog({
                     size="sm"
                     onClick={() => setOutcomes(outcomes.filter((_, j) => j !== i))}
                   >
-                    削除
+                    {t.admin.deleteOutcome}
                   </Button>
                 )}
               </div>
             ))}
             {outcomes.length < 5 && (
               <Button type="button" variant="outline" size="sm" onClick={() => setOutcomes([...outcomes, ""])}>
-                選択肢を追加
+                {t.admin.addOutcome}
               </Button>
             )}
           </div>
@@ -242,10 +230,10 @@ function CreateMarketDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            キャンセル
+            {t.admin.cancel}
           </Button>
           <Button onClick={handleCreate} disabled={loading}>
-            {loading ? "作成中..." : "マーケット作成"}
+            {loading ? t.admin.creating : t.admin.createMarket}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -265,6 +253,7 @@ function ResolveDialog({
   onResolved: () => void;
 }) {
   const { toast } = useToast();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [selectedOutcome, setSelectedOutcome] = useState("");
   const [loading, setLoading] = useState(false);
@@ -274,13 +263,13 @@ function ResolveDialog({
     setLoading(true);
     try {
       await adminResolveMarket(adminKey, market.id, selectedOutcome);
-      toast({ title: "成功", description: "マーケットを確定しました" });
+      toast({ title: t.admin.success, description: t.admin.marketResolved });
       setOpen(false);
       onResolved();
     } catch (err) {
       toast({
-        title: "エラー",
-        description: err instanceof Error ? err.message : "確定に失敗しました",
+        title: t.admin.error,
+        description: err instanceof Error ? err.message : t.admin.resolveFailed,
         variant: "destructive",
       });
     } finally {
@@ -292,19 +281,19 @@ function ResolveDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="destructive">
-          確定
+          {t.admin.confirmResolve}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>マーケットを確定</DialogTitle>
+          <DialogTitle>{t.admin.resolveMarket}</DialogTitle>
           <DialogDescription>{market.title}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-2">
-          <Label>勝利アウトカムを選択</Label>
+          <Label>{t.admin.selectWinningOutcome}</Label>
           <Select value={selectedOutcome} onValueChange={setSelectedOutcome}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="アウトカムを選択" />
+              <SelectValue placeholder={t.admin.selectOutcome} />
             </SelectTrigger>
             <SelectContent>
               {market.outcomes.map((o) => (
@@ -317,10 +306,10 @@ function ResolveDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            キャンセル
+            {t.admin.cancel}
           </Button>
           <Button variant="destructive" onClick={handleResolve} disabled={loading || !selectedOutcome}>
-            {loading ? "確定中..." : "確定する"}
+            {loading ? t.admin.resolving : t.admin.resolve}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -340,18 +329,19 @@ function MarketActions({
   onAction: () => void;
 }) {
   const { toast } = useToast();
+  const t = useT();
   const [loading, setLoading] = useState(false);
 
   async function handleClose() {
     setLoading(true);
     try {
       await adminCloseMarket(adminKey, market.id);
-      toast({ title: "成功", description: "マーケットを締め切りました" });
+      toast({ title: t.admin.success, description: t.admin.marketClosedSuccess });
       onAction();
     } catch (err) {
       toast({
-        title: "エラー",
-        description: err instanceof Error ? err.message : "操作に失敗しました",
+        title: t.admin.error,
+        description: err instanceof Error ? err.message : t.admin.operationFailed,
         variant: "destructive",
       });
     } finally {
@@ -365,7 +355,7 @@ function MarketActions({
     <div className="flex gap-1">
       {status === "Open" && (
         <Button size="sm" variant="secondary" onClick={handleClose} disabled={loading}>
-          締切
+          {t.admin.closeMarket}
         </Button>
       )}
       {status === "Closed" && (
@@ -386,8 +376,26 @@ function MarketTable({
   adminKey: string;
   onAction: () => void;
 }) {
+  const t = useT();
+  const { locale } = useLanguage();
+  const dateLocale = getDateLocale(locale);
+
+  const statusLabel: Record<string, string> = {
+    Draft: t.admin.statusDraft,
+    Open: t.admin.statusOpen,
+    Closed: t.admin.statusClosed,
+    Resolved: t.admin.statusResolved,
+  };
+
+  const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    Draft: "outline",
+    Open: "default",
+    Closed: "secondary",
+    Resolved: "destructive",
+  };
+
   if (markets.length === 0) {
-    return <p className="text-muted-foreground py-8 text-center text-sm">マーケットがありません</p>;
+    return <p className="text-muted-foreground py-8 text-center text-sm">{t.admin.noMarkets}</p>;
   }
 
   return (
@@ -395,11 +403,11 @@ function MarketTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left">
-            <th className="px-3 py-2 font-medium">ID</th>
-            <th className="px-3 py-2 font-medium">タイトル</th>
-            <th className="px-3 py-2 font-medium">ステータス</th>
-            <th className="px-3 py-2 font-medium">締切</th>
-            <th className="px-3 py-2 font-medium">操作</th>
+            <th className="px-3 py-2 font-medium">{t.admin.tableId}</th>
+            <th className="px-3 py-2 font-medium">{t.admin.tableTitle}</th>
+            <th className="px-3 py-2 font-medium">{t.admin.tableStatus}</th>
+            <th className="px-3 py-2 font-medium">{t.admin.tableDeadline}</th>
+            <th className="px-3 py-2 font-medium">{t.admin.tableActions}</th>
           </tr>
         </thead>
         <tbody>
@@ -415,7 +423,7 @@ function MarketTable({
                 </Badge>
               </td>
               <td className="text-muted-foreground px-3 py-2 text-xs">
-                {new Date(m.bettingDeadline).toLocaleString("ja-JP")}
+                {new Date(m.bettingDeadline).toLocaleString(dateLocale)}
               </td>
               <td className="px-3 py-2">
                 <MarketActions market={m} adminKey={adminKey} onAction={onAction} />
@@ -432,6 +440,7 @@ function MarketTable({
 
 export default function AdminPage() {
   const { toast } = useToast();
+  const t = useT();
   const { connected: walletConnected, address: walletAddress, connect } = useWallet();
   const [adminKey, setAdminKey] = useState<string | null>(null);
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -452,8 +461,8 @@ export default function AdminPage() {
       setMarkets(data);
     } catch (err) {
       toast({
-        title: "エラー",
-        description: err instanceof Error ? err.message : "取得に失敗しました",
+        title: t.admin.error,
+        description: err instanceof Error ? err.message : t.admin.fetchFailed,
         variant: "destructive",
       });
       // If auth fails, clear key
@@ -464,7 +473,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [adminKey, toast]);
+  }, [adminKey, toast, t]);
 
   useEffect(() => {
     if (!adminKey) return;
@@ -493,11 +502,11 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">管理画面</h1>
+        <h1 className="text-2xl font-bold">{t.admin.title}</h1>
         <div className="flex gap-2">
           {!walletConnected ? (
             <Button variant="outline" size="sm" onClick={connect}>
-              MetaMask接続
+              {t.admin.connectMetaMask}
             </Button>
           ) : (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -507,7 +516,7 @@ export default function AdminPage() {
           )}
           <CreateMarketDialog adminKey={adminKey} categories={categories} onCreated={loadMarkets} />
           <Button variant="outline" size="sm" onClick={handleLogout}>
-            ログアウト
+            {t.admin.logout}
           </Button>
         </div>
       </div>
@@ -515,9 +524,9 @@ export default function AdminPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>マーケット一覧</CardTitle>
+            <CardTitle>{t.admin.marketList}</CardTitle>
             <Button variant="ghost" size="sm" onClick={loadMarkets} disabled={loading}>
-              {loading ? "読込中..." : "更新"}
+              {loading ? t.admin.loadingDots : t.admin.refresh}
             </Button>
           </div>
         </CardHeader>

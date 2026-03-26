@@ -3,21 +3,27 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { formatEth, type UserBet } from "@/lib/api"
+import { useT, useLanguage } from "@/contexts/LanguageContext"
+import { getDateLocale } from "@/lib/format"
 
 export function ActiveBets({ bets }: { bets: UserBet[] }) {
+  const t = useT()
+  const { locale } = useLanguage()
+  const dateLocale = getDateLocale(locale)
+
   if (bets.length === 0) {
     return (
-      <section aria-label="アクティブな予測" className="mt-10">
-        <h2 className="text-lg font-bold text-foreground">アクティブな予測</h2>
+      <section aria-label={t.activeBets.title} className="mt-10">
+        <h2 className="text-lg font-bold text-foreground">{t.activeBets.title}</h2>
         <div className="mt-6 rounded-lg border border-border py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            まだ予測を行っていません
+            {t.activeBets.noBets}
           </p>
           <Link
             href="/"
             className="mt-3 inline-block text-sm text-foreground underline underline-offset-4 transition-opacity hover:opacity-70"
           >
-            マーケットを見る
+            {t.activeBets.viewMarkets}
           </Link>
         </div>
       </section>
@@ -25,8 +31,8 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
   }
 
   return (
-    <section aria-label="アクティブな予測" className="mt-10">
-      <h2 className="text-lg font-bold text-foreground">アクティブな予測</h2>
+    <section aria-label={t.activeBets.title} className="mt-10">
+      <h2 className="text-lg font-bold text-foreground">{t.activeBets.title}</h2>
 
       <div className="mt-6 flex flex-col gap-4">
         {bets.map((bet) => (
@@ -41,7 +47,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
                   {bet.marketTitle || bet.marketId}
                 </h3>
                 <p className="mt-1.5 text-sm text-muted-foreground">
-                  予測: {bet.outcomeLabel}
+                  {t.activeBets.prediction} {bet.outcomeLabel}
                 </p>
               </div>
               <span
@@ -52,20 +58,20 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
                     : "border-border text-muted-foreground"
                 )}
               >
-                {bet.status === "open" ? "オープン" : "クローズ"}
+                {bet.status === "open" ? t.activeBets.statusOpen : t.activeBets.statusClosed}
               </span>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <div>
-                <span className="text-muted-foreground">ベット額: </span>
+                <span className="text-muted-foreground">{t.activeBets.betAmount} </span>
                 <span className="font-mono text-foreground">
                   {formatEth(bet.amountWei)}
                 </span>
               </div>
               {bet.weightScore > 1 && (
                 <div>
-                  <span className="text-muted-foreground">重み: </span>
+                  <span className="text-muted-foreground">{t.activeBets.weight} </span>
                   <span className="font-mono text-foreground">
                     {"\u00D7"}{bet.weightScore.toFixed(1)}
                   </span>
@@ -73,7 +79,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
               )}
               {bet.effectiveAmountWei && bet.effectiveAmountWei !== bet.amountWei && (
                 <div>
-                  <span className="text-muted-foreground">実効額: </span>
+                  <span className="text-muted-foreground">{t.activeBets.effectiveAmount} </span>
                   <span className="font-mono text-foreground">
                     {formatEth(bet.effectiveAmountWei)}
                   </span>
@@ -84,7 +90,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
             {bet.currentProbability > 0 && (
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">現在の確率</span>
+                  <span className="text-muted-foreground">{t.activeBets.currentProbability}</span>
                   <span className="font-mono font-medium text-foreground">
                     {bet.currentProbability}%
                   </span>
@@ -99,7 +105,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
             )}
 
             <p className="mt-3 font-mono text-xs text-muted-foreground">
-              {new Date(bet.createdAt).toLocaleDateString("ja-JP")}
+              {new Date(bet.createdAt).toLocaleDateString(dateLocale)}
             </p>
           </Link>
         ))}

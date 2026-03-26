@@ -1,4 +1,8 @@
+"use client"
+
 import { formatEth } from "@/lib/api"
+import { useT, useLanguage } from "@/contexts/LanguageContext"
+import { getDateLocale } from "@/lib/format"
 
 type MarketInfoBoxProps = {
   totalPoolWei: string
@@ -13,24 +17,28 @@ export function MarketInfoBox({
   createdAt,
   endDate,
 }: MarketInfoBoxProps) {
+  const t = useT()
+  const { locale } = useLanguage()
+  const dateLocale = getDateLocale(locale)
+
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString("ja-JP")
+      return new Date(dateStr).toLocaleDateString(dateLocale)
     } catch {
       return dateStr
     }
   }
 
   const rows = [
-    { label: "総取引量", value: formatEth(totalPoolWei) },
-    { label: "参加者数", value: `${participants}人` },
-    { label: "作成日", value: formatDate(createdAt) },
-    { label: "終了日", value: formatDate(endDate) },
+    { label: t.marketInfoBox.totalVolume, value: formatEth(totalPoolWei) },
+    { label: t.marketInfoBox.participantsLabel, value: t.marketInfoBox.participants(participants) },
+    { label: t.marketInfoBox.createdDate, value: formatDate(createdAt) },
+    { label: t.marketInfoBox.endDate, value: formatDate(endDate) },
   ]
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
-      <h3 className="text-sm font-medium text-foreground">マーケット情報</h3>
+      <h3 className="text-sm font-medium text-foreground">{t.marketInfoBox.title}</h3>
 
       <div className="mt-4 flex flex-col gap-3">
         {rows.map((row) => (
