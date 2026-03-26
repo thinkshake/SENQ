@@ -1,39 +1,41 @@
 /**
  * Application configuration from environment variables.
  */
+const env = (key: string): string | undefined => process.env[key];
+
 export const config = {
   /** Server port */
-  port: parseInt(process.env.PORT || "3001", 10),
+  port: parseInt(env("PORT") || "3001", 10),
 
   /** Environment mode */
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv: env("NODE_ENV") || "development",
 
   /** SQLite database path */
-  databasePath: process.env.DATABASE_PATH || "./data/senq.db",
+  databasePath: env("DATABASE_PATH") || "./data/senq.db",
 
   /** EVM JSON-RPC endpoint */
-  evmRpcUrl: process.env.EVM_RPC_URL || "http://localhost:8545",
+  evmRpcUrl: env("EVM_RPC_URL") || "http://localhost:8545",
 
   /** EVM Chain ID */
-  evmChainId: parseInt(process.env.EVM_CHAIN_ID || "1337", 10),
+  evmChainId: parseInt(env("EVM_CHAIN_ID") || "1337", 10),
 
   /** Market operator EVM address (receives bet payments) */
-  operatorAddress: process.env.EVM_OPERATOR_ADDRESS || "",
+  operatorAddress: env("EVM_OPERATOR_ADDRESS") || "",
 
   /** Market operator private key (for auto-payouts) */
-  operatorPrivateKey: process.env.EVM_OPERATOR_PRIVATE_KEY || "",
+  operatorPrivateKey: env("EVM_OPERATOR_PRIVATE_KEY") || "",
 
   /** SENQMarket contract address */
-  evmContractAddress: process.env.EVM_CONTRACT_ADDRESS || "",
+  evmContractAddress: env("EVM_CONTRACT_ADDRESS") || "",
 
   /** JPYC token contract address */
-  jpycTokenAddress: process.env.JPYC_TOKEN_ADDRESS || "",
+  jpycTokenAddress: env("JPYC_TOKEN_ADDRESS") || "",
 
   /** JPYC token decimals */
-  jpycDecimals: parseInt(process.env.JPYC_DECIMALS || "18", 10),
+  jpycDecimals: parseInt(env("JPYC_DECIMALS") || "18", 10),
 
   /** Admin API key for privileged operations */
-  adminApiKey: process.env.ADMIN_API_KEY || "",
+  adminApiKey: env("ADMIN_API_KEY") || "",
 } as const;
 
 /**

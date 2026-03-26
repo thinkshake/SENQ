@@ -8,13 +8,6 @@ FROM base AS deps
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
-# Build
-FROM base AS builder
-COPY . .
-RUN rm -rf node_modules
-COPY --from=deps /app/node_modules ./node_modules
-RUN bun run build
-
 # Production
 FROM base AS runner
 ENV NODE_ENV=production
@@ -22,9 +15,9 @@ ENV NODE_ENV=production
 # Create data directory for SQLite
 RUN mkdir -p /data && chown -R bun:bun /data
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src/db/migrations ./dist/migrations
+COPY . .
+RUN rm -rf node_modules
+COPY --from=deps /app/node_modules ./node_modules
 
 USER bun
 EXPOSE 3001
@@ -32,4 +25,4 @@ EXPOSE 3001
 ENV PORT=3001
 ENV DATABASE_PATH=/data/mitate.db
 
-CMD ["bun", "run", "dist/index.js"]
+CMD ["bun", "run", "src/index.ts"]
