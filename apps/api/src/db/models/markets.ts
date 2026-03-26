@@ -35,6 +35,7 @@ export interface Market {
   yes_total_wei: string;
   no_total_wei: string;
   operator_address: string;
+  chain_market_id: number | null;
 }
 
 export interface MarketWithOutcomes extends Market {
@@ -70,6 +71,7 @@ export interface MarketUpdate {
   yesTotalWei?: string;
   noTotalWei?: string;
   operatorAddress?: string;
+  chainMarketId?: number;
 }
 
 // ── Queries ────────────────────────────────────────────────────────
@@ -193,6 +195,7 @@ export function updateMarket(id: string, update: MarketUpdate): Market | null {
   if (update.yesTotalWei !== undefined) { sets.push("yes_total_wei = ?"); values.push(update.yesTotalWei); }
   if (update.noTotalWei !== undefined) { sets.push("no_total_wei = ?"); values.push(update.noTotalWei); }
   if (update.operatorAddress !== undefined) { sets.push("operator_address = ?"); values.push(update.operatorAddress); }
+  if (update.chainMarketId !== undefined) { sets.push("chain_market_id = ?"); values.push(update.chainMarketId); }
 
   if (sets.length === 0) return getMarketById(id);
 

@@ -18,6 +18,7 @@ import {
   type MarketWithOutcomes,
   type MarketStatus,
 } from "../db/models/markets";
+import { createMarketOnChain } from "../evm/client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -69,10 +70,31 @@ export async function createNewMarket(
 
   const market = createMarketWithOutcomes(marketData);
 
-  // Auto-open: no blockchain tx needed on EVM
-  const opened = updateMarket(market.id, { status: "Open" });
+  // Binary markets (exactly 2 outcomes) → create on-chain
+  const isBinary = outcomes.length === 2;
+  if (isBinary) {
+    try {
+      const deadlineUnix = Math.floor(deadline.getTime() / 1000);
+      const { txHash, marketId: chainMarketId } = await createMarketOnChain(
+        input.title,
+        deadlineUnix
+      );
+      console.log("[createMarket] On-chain tx:", txHash, "chainMarketId:", chainMarketId.toString());
+      updateMarket(market.id, {
+        status: "Open",
+        chainMarketId: Number(chainMarketId),
+      });
+    } catch (err) {
+      console.error("[createMarket] On-chain creation failed:", err);
+      updateMarket(market.id, { status: "Stalled" });
+      return { market: getMarketWithOutcomes(market.id)! };
+    }
+  } else {
+    // Multi-outcome markets stay DB-only
+    updateMarket(market.id, { status: "Open" });
+  }
 
-  return { market: getMarketWithOutcomes(opened!.id)! };
+  return { market: getMarketWithOutcomes(market.id)! };
 }
 
 export function getMarket(id: string): Market | null {

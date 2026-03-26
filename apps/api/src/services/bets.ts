@@ -35,7 +35,7 @@ import {
   calculateWeightScore,
 } from "../db/models/user-attributes";
 import { getOrCreateUser, getUserById } from "../db/models/users";
-import { getJpycAllowance, CONTRACT_ADDRESS, ERC20_ABI } from "../evm/client";
+import { getJpycAllowance, CONTRACT_ADDRESS, ERC20_ABI, SENQ_MARKET_ABI } from "../evm/client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -133,16 +133,37 @@ export async function placeBet(input: PlaceBetInput): Promise<PlaceBetResult> {
     };
   }
 
-  // Generate bet tx: JPYC transfer to the contract address
-  const betTx = {
-    from: input.userAddress,
-    to: jpycAddress,
-    data: encodeFunctionData({
-      abi: ERC20_ABI,
-      functionName: "transfer",
-      args: [contractAddress, amount],
-    }),
-  };
+  // Generate bet tx
+  let betTx: unknown;
+  const chainMarketId = market.chain_market_id;
+
+  if (chainMarketId != null) {
+    // On-chain binary market: call betYes/betNo on contract
+    const outcomes = getOutcomesWithProbability(input.marketId);
+    const outcomeIndex = outcomes.findIndex((o) => o.id === input.outcomeId);
+    const functionName = outcomeIndex === 0 ? "betYes" : "betNo";
+
+    betTx = {
+      from: input.userAddress,
+      to: contractAddress,
+      data: encodeFunctionData({
+        abi: SENQ_MARKET_ABI,
+        functionName,
+        args: [BigInt(chainMarketId), amount],
+      }),
+    };
+  } else {
+    // Multi-outcome or off-chain market: plain JPYC transfer
+    betTx = {
+      from: input.userAddress,
+      to: jpycAddress,
+      data: encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: "transfer",
+        args: [contractAddress, amount],
+      }),
+    };
+  }
 
   return { bet, weightScore, effectiveAmountWei, approveTx, betTx };
 }

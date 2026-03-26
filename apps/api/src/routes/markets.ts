@@ -16,7 +16,7 @@ import {
 } from "../services/markets";
 import { config } from "../config";
 import { getOutcomesWithProbability } from "../db/models/outcomes";
-import { CONTRACT_ADDRESS, ERC20_ABI } from "../evm/client";
+import { CONTRACT_ADDRESS, ERC20_ABI, SENQ_MARKET_ABI, resolveMarketOnChain } from "../evm/client";
 import { encodeFunctionData } from "viem";
 
 const markets = new Hono();
@@ -207,6 +207,28 @@ markets.post("/:id/resolve", async (c) => {
 
   console.log("[resolve] Market resolved:", id, "winning outcome:", body.outcomeId);
 
+  // Resolve on-chain for binary markets
+  const chainMarketId = market.chain_market_id;
+  if (chainMarketId != null) {
+    try {
+      const outcomes = getOutcomesWithProbability(id);
+      const winningIndex = outcomes.findIndex((o) => o.id === body.outcomeId);
+      const onChainOutcome = winningIndex === 0; // index 0 = YES (true), index 1 = NO (false)
+
+      const resolveTxHash = await resolveMarketOnChain(
+        BigInt(chainMarketId),
+        onChainOutcome
+      );
+      console.log("[resolve] On-chain resolve tx:", resolveTxHash);
+    } catch (err) {
+      console.error("[resolve] On-chain resolve failed:", err);
+      updateMarket(id, { status: "Stalled" });
+      return c.json({
+        error: { code: "ON_CHAIN_ERROR", message: "On-chain resolve failed. Market set to Stalled." },
+      }, 500);
+    }
+  }
+
   const winningBets = listConfirmedBetsByOutcomeId(id, body.outcomeId);
   const totalPool = BigInt(market.pool_total_wei);
   const winningTotal = BigInt(getTotalEffectiveAmount(id, body.outcomeId));
@@ -232,17 +254,32 @@ markets.post("/:id/resolve", async (c) => {
         amountWei: payoutAmount.toString(),
       });
 
-      // Generate JPYC transfer tx from operator to winner
-      const jpycAddress = config.jpycTokenAddress as `0x${string}`;
-      const payoutTx = {
-        from: config.evmOperatorAddress,
-        to: jpycAddress,
-        data: encodeFunctionData({
-          abi: ERC20_ABI,
-          functionName: "transfer",
-          args: [user.wallet_address as `0x${string}`, payoutAmount],
-        }),
-      };
+      // Generate payout tx
+      let payoutTx: unknown;
+      if (chainMarketId != null) {
+        // On-chain market: user calls claimPayout on contract
+        payoutTx = {
+          from: user.wallet_address,
+          to: CONTRACT_ADDRESS,
+          data: encodeFunctionData({
+            abi: SENQ_MARKET_ABI,
+            functionName: "claimPayout",
+            args: [BigInt(chainMarketId)],
+          }),
+        };
+      } else {
+        // Off-chain market: operator JPYC transfer
+        const jpycAddress = config.jpycTokenAddress as `0x${string}`;
+        payoutTx = {
+          from: config.operatorAddress,
+          to: jpycAddress,
+          data: encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [user.wallet_address as `0x${string}`, payoutAmount],
+          }),
+        };
+      }
 
       payoutResults.push({
         betId: bet.id,

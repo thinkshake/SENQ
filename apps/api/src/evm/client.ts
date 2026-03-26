@@ -218,6 +218,15 @@ export const SENQ_MARKET_ABI = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "cancelMarket",
+    inputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
     type: "event",
     name: "MarketCreated",
     inputs: [
@@ -330,6 +339,38 @@ export async function resolveMarketOnChain(
     abi: SENQ_MARKET_ABI,
     functionName: "resolve",
     args: [marketId, outcome],
+  });
+
+  return hash;
+}
+
+/**
+ * Cancel a market on-chain (owner only).
+ */
+export async function cancelMarketOnChain(
+  marketId: bigint
+): Promise<string> {
+  if (!config.operatorPrivateKey) {
+    throw new Error("EVM_OPERATOR_PRIVATE_KEY not configured");
+  }
+  if (!CONTRACT_ADDRESS) {
+    throw new Error("EVM_CONTRACT_ADDRESS not configured");
+  }
+
+  const account = privateKeyToAccount(config.operatorPrivateKey as `0x${string}`);
+  const chain = getChain();
+
+  const walletClient = createWalletClient({
+    account,
+    chain,
+    transport: http(config.evmRpcUrl),
+  });
+
+  const hash = await walletClient.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: SENQ_MARKET_ABI,
+    functionName: "cancelMarket",
+    args: [marketId],
   });
 
   return hash;
