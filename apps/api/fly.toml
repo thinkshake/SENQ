@@ -1,38 +1,42 @@
-# fly.toml - Fly.io configuration for MITATE API
+# fly.toml app configuration file generated for mitate-api on 2026-03-26T22:05:03+09:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "mitate-api"
-primary_region = "nrt"
+app = 'mitate-api'
+primary_region = 'nrt'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  NODE_ENV = "production"
-  PORT = "3001"
-  DATABASE_PATH = "/data/mitate.db"
-  XRPL_RPC_URL = "https://s.altnet.rippletest.net:51234"
-  XRPL_WS_URL = "wss://s.altnet.rippletest.net:51233"
+  DATABASE_PATH = '/data/mitate.db'
+  NODE_ENV = 'production'
+  PORT = '3001'
+  XRPL_RPC_URL = 'https://s.altnet.rippletest.net:51234'
+  XRPL_WS_URL = 'wss://s.altnet.rippletest.net:51233'
+
+[[mounts]]
+  source = 'mitate_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 3001
   force_https = true
-  auto_stop_machines = "suspend"
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]
+  processes = ['app']
 
-[[http_service.checks]]
-  grace_period = "10s"
-  interval = "30s"
-  method = "GET"
-  path = "/health"
-  timeout = "5s"
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  memory = "512mb"
-  cpu_kind = "shared"
+  memory = '512mb'
+  cpu_kind = 'shared'
   cpus = 1
-
-[mounts]
-  source = "mitate_data"
-  destination = "/data"
+  memory_mb = 512
