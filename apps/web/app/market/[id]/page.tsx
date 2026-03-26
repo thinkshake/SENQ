@@ -11,7 +11,7 @@ import { MarketInfoBox } from "@/components/market-info-box"
 import { PositionBox } from "@/components/position-box"
 import {
   getBetsForMarket,
-  formatEth,
+  formatJpyc,
   type Bet,
 } from "@/lib/api"
 
@@ -164,7 +164,7 @@ export default function MarketDetailPage({ params }: PageProps) {
                       </span>
                     </div>
                     <span className="font-mono text-xs text-foreground">
-                      {formatEth(bet.amountWei)}
+                      {formatJpyc(bet.amountWei)}
                     </span>
                   </div>
                 ))}

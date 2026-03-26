@@ -205,34 +205,47 @@ export function updateMarket(id: string, update: MarketUpdate): Market | null {
 
 export function addToPoolMultiOutcome(id: string, amountWei: string): void {
   const db = getDb();
+  const row = db.query(`SELECT pool_total_wei FROM markets WHERE id = ?`).get(id) as { pool_total_wei: string } | null;
+  const current = BigInt(row?.pool_total_wei || "0");
+  const updated = (current + BigInt(amountWei)).toString();
   db.query(
     `UPDATE markets SET
-      pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
+      pool_total_wei = ?,
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
      WHERE id = ?`
-  ).run(amountWei, id);
+  ).run(updated, id);
 }
 
 export function addToPool(id: string, outcome: MarketOutcome, amountWei: string): void {
   const db = getDb();
+  const row = db.query(`SELECT pool_total_wei, yes_total_wei, no_total_wei FROM markets WHERE id = ?`).get(id) as {
+    pool_total_wei: string;
+    yes_total_wei: string;
+    no_total_wei: string;
+  } | null;
+  if (!row) return;
+
   const amount = BigInt(amountWei);
+  const newPool = (BigInt(row.pool_total_wei || "0") + amount).toString();
 
   if (outcome === "YES") {
+    const newYes = (BigInt(row.yes_total_wei || "0") + amount).toString();
     db.query(
       `UPDATE markets SET
-        pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
-        yes_total_wei = CAST(CAST(yes_total_wei AS INTEGER) + ? AS TEXT),
+        pool_total_wei = ?,
+        yes_total_wei = ?,
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?`
-    ).run(amount.toString(), amount.toString(), id);
+    ).run(newPool, newYes, id);
   } else {
+    const newNo = (BigInt(row.no_total_wei || "0") + amount).toString();
     db.query(
       `UPDATE markets SET
-        pool_total_wei = CAST(CAST(pool_total_wei AS INTEGER) + ? AS TEXT),
-        no_total_wei = CAST(CAST(no_total_wei AS INTEGER) + ? AS TEXT),
+        pool_total_wei = ?,
+        no_total_wei = ?,
         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
        WHERE id = ?`
-    ).run(amount.toString(), amount.toString(), id);
+    ).run(newPool, newNo, id);
   }
 }
 

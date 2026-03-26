@@ -141,10 +141,15 @@ export interface PlaceBetResponse {
   bet: Bet;
   weightScore: number;
   effectiveAmountWei: string;
-  unsignedTx: {
+  approveTx: {
     from: string;
     to: string;
-    value: string;
+    data: string;
+  } | null;
+  betTx: {
+    from: string;
+    to: string;
+    data: string;
   };
 }
 
@@ -336,29 +341,36 @@ export async function adminResolveMarket(
   });
 }
 
+// ── Allowance ─────────────────────────────────────────────────────
+
+export async function fetchAllowance(address: string): Promise<string> {
+  const result = await apiFetch<{ allowance: string }>(`/allowance/${address}`);
+  return result.allowance;
+}
+
 // ── Formatting Helpers ─────────────────────────────────────────────
 
-export function weiToEth(wei: string | number): number {
-  return Number(wei) / 1e18;
+const JPYC_DECIMALS = parseInt(process.env.NEXT_PUBLIC_JPYC_DECIMALS || "18", 10);
+
+export function weiToJpyc(wei: string | number): number {
+  return Number(wei) / 10 ** JPYC_DECIMALS;
 }
 
-export function ethToWei(eth: number): string {
-  return Math.floor(eth * 1e18).toString();
+export function jpycToWei(jpyc: number): string {
+  return (BigInt(Math.floor(jpyc)) * 10n ** BigInt(JPYC_DECIMALS)).toString();
 }
 
-export function formatEth(wei: string | number): string {
-  const eth = weiToEth(wei);
-  if (eth === 0) return "0 ETH";
-  if (eth < 0.0001) return `${eth.toExponential(2)} ETH`;
-  return `${eth.toLocaleString("ja-JP", { maximumFractionDigits: 6 })} ETH`;
+export function formatJpyc(wei: string | number): string {
+  const jpyc = weiToJpyc(wei);
+  if (jpyc === 0) return "0 JPYC";
+  return `${Math.floor(jpyc).toLocaleString("ja-JP")} JPYC`;
 }
 
-export function formatEthCompact(wei: string | number): string {
-  const eth = weiToEth(wei);
-  if (eth >= 1000) return `${(eth / 1000).toFixed(1)}K ETH`;
-  if (eth >= 1) return `${eth.toFixed(4)} ETH`;
-  if (eth >= 0.001) return `${eth.toFixed(6)} ETH`;
-  return `${eth.toExponential(2)} ETH`;
+export function formatJpycCompact(wei: string | number): string {
+  const jpyc = weiToJpyc(wei);
+  if (jpyc >= 1_000_000) return `${(jpyc / 1_000_000).toFixed(1)}M JPYC`;
+  if (jpyc >= 1000) return `${(jpyc / 1000).toFixed(1)}K JPYC`;
+  return `${Math.floor(jpyc).toLocaleString("ja-JP")} JPYC`;
 }
 
 export function formatDeadline(deadline: string): string {

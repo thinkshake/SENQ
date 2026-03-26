@@ -8,7 +8,7 @@ export interface WalletState {
   connected: boolean;
   address: string | null;
   network: string | null;
-  balance: string | null; // ETH balance in wei
+  balance: string | null; // JPYC balance in wei
   loading: boolean;
   error: string | null;
   metaMaskInstalled: boolean;
@@ -61,9 +61,10 @@ async function ensureTargetChain() {
         params: [
           {
             chainId: TARGET_CHAIN_ID_HEX,
-            chainName: "Anvil Local",
+            chainName: "Avalanche",
             rpcUrls: [TARGET_RPC_URL],
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 },
+            blockExplorerUrls: ["https://snowtrace.io"],
           },
         ],
       });

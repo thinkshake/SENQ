@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { type Outcome, formatEth } from "@/lib/api"
+import { type Outcome, formatJpyc } from "@/lib/api"
 import { useT } from "@/contexts/LanguageContext"
 
 type OutcomesListProps = {
@@ -57,7 +57,7 @@ export function OutcomesList({
 
               <div className="mt-1.5 text-right">
                 <span className="font-mono text-xs text-muted-foreground">
-                  {formatEth(outcome.totalAmountWei)}
+                  {formatJpyc(outcome.totalAmountWei)}
                 </span>
               </div>
             </button>

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { type Market, formatEth } from "@/lib/api"
+import { type Market, formatJpyc } from "@/lib/api"
 import { useT } from "@/contexts/LanguageContext"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { formatDeadlineLocale } from "@/lib/format"
@@ -79,7 +79,7 @@ export function MarketCard({ market }: { market: Market }) {
 
         <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">
-            {t.marketCard.totalVolume} <span className="font-mono">{formatEth(market.totalPoolWei)}</span>
+            {t.marketCard.totalVolume} <span className="font-mono">{formatJpyc(market.totalPoolWei)}</span>
           </span>
           <span className="text-xs text-muted-foreground">
             {formatDeadlineLocale(market.bettingDeadline, t.format)}

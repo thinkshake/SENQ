@@ -70,11 +70,10 @@ export function listOutcomesByMarket(marketId: string): Outcome[] {
 
 export function addToOutcomeTotal(id: string, amountWei: string): void {
   const db = getDb();
-  db.query(
-    `UPDATE outcomes SET
-      total_amount_wei = CAST(CAST(total_amount_wei AS INTEGER) + ? AS TEXT)
-     WHERE id = ?`
-  ).run(amountWei, id);
+  const row = db.query(`SELECT total_amount_wei FROM outcomes WHERE id = ?`).get(id) as { total_amount_wei: string } | null;
+  const current = BigInt(row?.total_amount_wei || "0");
+  const updated = (current + BigInt(amountWei)).toString();
+  db.query(`UPDATE outcomes SET total_amount_wei = ? WHERE id = ?`).run(updated, id);
 }
 
 export function getOutcomesWithProbability(
@@ -82,7 +81,7 @@ export function getOutcomesWithProbability(
 ): (Outcome & { probability: number })[] {
   const outcomes = listOutcomesByMarket(marketId);
   const totalPool = outcomes.reduce(
-    (sum, o) => sum + BigInt(o.total_amount_wei),
+    (sum, o) => sum + BigInt(o.total_amount_wei || "0"),
     0n
   );
 
@@ -97,7 +96,7 @@ export function getOutcomesWithProbability(
 
   const rawProbs = outcomes.map((o) => ({
     outcome: o,
-    raw: Number((BigInt(o.total_amount_wei) * 10000n) / totalPool) / 100,
+    raw: Number((BigInt(o.total_amount_wei || "0") * 10000n) / totalPool) / 100,
   }));
 
   const rounded = rawProbs.map((p) => Math.round(p.raw));

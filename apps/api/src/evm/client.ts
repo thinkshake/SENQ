@@ -19,12 +19,54 @@ function getChain() {
   return defineChain({
     id: config.evmChainId,
     name: "EVM",
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 },
     rpcUrls: {
       default: { http: [config.evmRpcUrl] },
     },
   });
 }
+
+// ── ERC20 ABI ─────────────────────────────────────────────────────
+
+export const ERC20_ABI = [
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [{ name: "account", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address", internalType: "address" },
+      { name: "spender", type: "address", internalType: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      { name: "spender", type: "address", internalType: "address" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "transfer",
+    inputs: [
+      { name: "to", type: "address", internalType: "address" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "nonpayable",
+  },
+] as const satisfies Abi;
 
 // ── Health ─────────────────────────────────────────────────────────
 
@@ -63,48 +105,38 @@ export async function getEvmHealth(): Promise<EvmHealth> {
   }
 }
 
-// ── Balance ────────────────────────────────────────────────────────
+// ── JPYC Balance & Allowance ──────────────────────────────────────
 
 /**
- * Get ETH balance for an address (in wei).
+ * Get JPYC token balance for an address.
  */
-export async function getEvmBalance(address: `0x${string}`): Promise<bigint> {
+export async function getJpycBalance(address: `0x${string}`): Promise<bigint> {
   const client = createPublicClient({
     chain: getChain(),
     transport: http(config.evmRpcUrl),
   });
-  return client.getBalance({ address });
+  return client.readContract({
+    address: config.jpycTokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address],
+  });
 }
 
-// ── Transaction submission ─────────────────────────────────────────
-
 /**
- * Sign and submit an ETH transfer using the operator wallet.
- * Used for server-side payouts.
+ * Get JPYC token allowance for owner -> spender.
  */
-export async function signAndSubmitWithOperator(
-  to: `0x${string}`,
-  valueWei: bigint
-): Promise<{ hash: string }> {
-  if (!config.operatorPrivateKey) {
-    throw new Error("EVM_OPERATOR_PRIVATE_KEY not configured");
-  }
-
-  const account = privateKeyToAccount(config.operatorPrivateKey as `0x${string}`);
-  const chain = getChain();
-
-  const walletClient = createWalletClient({
-    account,
-    chain,
+export async function getJpycAllowance(owner: `0x${string}`, spender: `0x${string}`): Promise<bigint> {
+  const client = createPublicClient({
+    chain: getChain(),
     transport: http(config.evmRpcUrl),
   });
-
-  const hash = await walletClient.sendTransaction({
-    to,
-    value: valueWei,
+  return client.readContract({
+    address: config.jpycTokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: [owner, spender],
   });
-
-  return { hash };
 }
 
 // ── SENQMarket contract ────────────────────────────────────────────
@@ -128,6 +160,44 @@ export const SENQ_MARKET_ABI = [
     inputs: [
       { name: "marketId", type: "uint256", internalType: "uint256" },
       { name: "outcome", type: "bool", internalType: "bool" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "betYes",
+    inputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "betNo",
+    inputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimPayout",
+    inputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimRefund",
+    inputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
     ],
     outputs: [],
     stateMutability: "nonpayable",

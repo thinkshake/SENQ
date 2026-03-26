@@ -1,6 +1,6 @@
 "use client"
 
-import { formatEth } from "@/lib/api"
+import { formatJpyc } from "@/lib/api"
 import { useT } from "@/contexts/LanguageContext"
 
 type Position = {
@@ -36,7 +36,7 @@ export function PositionBox({ positions }: PositionBoxProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{t.positionBox.betAmount}</span>
                 <span className="font-mono text-foreground">
-                  {formatEth(pos.amountWei)}
+                  {formatJpyc(pos.amountWei)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -48,7 +48,7 @@ export function PositionBox({ positions }: PositionBoxProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{t.positionBox.effectiveBet}</span>
                 <span className="font-mono font-medium text-foreground">
-                  {formatEth(pos.effectiveAmountWei)}
+                  {formatJpyc(pos.effectiveAmountWei)}
                 </span>
               </div>
             </div>

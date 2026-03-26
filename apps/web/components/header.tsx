@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWallet } from "@/contexts/WalletContext";
-import { formatEth } from "@/lib/api";
+import { formatJpyc } from "@/lib/api";
 
 export function Header() {
   const wallet = useWallet();
@@ -68,7 +68,7 @@ export function Header() {
                   <span>{formatAddress(wallet.address || "")}</span>
                   {wallet.balance && (
                     <span className="text-xs text-muted-foreground">
-                      {formatEth(wallet.balance)}
+                      {formatJpyc(wallet.balance)}
                     </span>
                   )}
                 </Button>

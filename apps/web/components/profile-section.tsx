@@ -1,6 +1,6 @@
 "use client"
 
-import { formatEth } from "@/lib/api"
+import { formatJpyc } from "@/lib/api"
 import { useT } from "@/contexts/LanguageContext"
 
 type ProfileSectionProps = {
@@ -45,7 +45,7 @@ export function ProfileSection({
         <div className="rounded-lg border border-border p-4">
           <p className="text-xs text-muted-foreground">{t.profileSection.balance}</p>
           <p className="mt-2 font-mono text-xl font-bold text-foreground">
-            {balance ? formatEth(balance) : "\u2014"}
+            {balance ? formatJpyc(balance) : "\u2014"}
           </p>
         </div>
         <div className="rounded-lg border border-border p-4">
@@ -63,14 +63,14 @@ export function ProfileSection({
         <div className="rounded-lg border border-border p-4">
           <p className="text-xs text-muted-foreground">{t.profileSection.totalStake}</p>
           <p className="mt-2 font-mono text-xl font-bold text-foreground">
-            {formatEth(totalBetWei)}
+            {formatJpyc(totalBetWei)}
           </p>
         </div>
       </div>
 
       {totalEffectiveWei !== totalBetWei && (
         <p className="mt-2 text-right text-xs text-muted-foreground">
-          {t.profileSection.effectiveTotal} {formatEth(totalEffectiveWei)}
+          {t.profileSection.effectiveTotal} {formatJpyc(totalEffectiveWei)}
         </p>
       )}
     </section>

@@ -119,31 +119,34 @@ export function getPayoutStats(marketId: string): {
   sentWei: string;
 } {
   const db = getDb();
-  const result = db.query(
+  const countResult = db.query(
     `SELECT
       COUNT(*) as total,
       SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
       SUM(CASE WHEN status = 'Sent' THEN 1 ELSE 0 END) as sent,
-      SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed,
-      COALESCE(SUM(CAST(amount_wei AS INTEGER)), 0) as total_wei,
-      COALESCE(SUM(CASE WHEN status = 'Sent' THEN CAST(amount_wei AS INTEGER) ELSE 0 END), 0) as sent_wei
+      SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed
      FROM payouts WHERE market_id = ?`
-  ).get(marketId) as {
-    total: number;
-    pending: number;
-    sent: number;
-    failed: number;
-    total_wei: number;
-    sent_wei: number;
-  };
+  ).get(marketId) as { total: number; pending: number; sent: number; failed: number };
+
+  const rows = db.query(
+    `SELECT amount_wei, status FROM payouts WHERE market_id = ?`
+  ).all(marketId) as { amount_wei: string; status: string }[];
+
+  let totalWei = 0n;
+  let sentWei = 0n;
+  for (const r of rows) {
+    const amt = BigInt(r.amount_wei || "0");
+    totalWei += amt;
+    if (r.status === "Sent") sentWei += amt;
+  }
 
   return {
-    total: result.total,
-    pending: result.pending,
-    sent: result.sent,
-    failed: result.failed,
-    totalWei: result.total_wei.toString(),
-    sentWei: result.sent_wei.toString(),
+    total: countResult.total,
+    pending: countResult.pending,
+    sent: countResult.sent,
+    failed: countResult.failed,
+    totalWei: totalWei.toString(),
+    sentWei: sentWei.toString(),
   };
 }
 

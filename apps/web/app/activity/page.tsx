@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/contexts/WalletContext";
 import { useUser } from "@/contexts/UserContext";
 import { useT, useLanguage } from "@/contexts/LanguageContext";
-import { formatEth } from "@/lib/api";
+import { formatJpyc } from "@/lib/api";
 import { getDateLocale } from "@/lib/format";
 
 export default function ActivityPage() {
@@ -104,7 +104,7 @@ export default function ActivityPage() {
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      {formatEth(bet.amountWei)}
+                      {formatJpyc(bet.amountWei)}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {new Date(bet.createdAt).toLocaleDateString(dateLocale)}

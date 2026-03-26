@@ -2,6 +2,7 @@
  * Payouts service - resolution and payout distribution.
  */
 import { config } from "../config";
+import { encodeFunctionData } from "viem";
 import {
   getMarketById,
   updateMarket,
@@ -21,6 +22,7 @@ import {
   payoutExistsForUser,
   type Payout,
 } from "../db/models/payouts";
+import { ERC20_ABI } from "../evm/client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -146,12 +148,18 @@ export function executePayouts(input: ExecutePayoutsInput): ExecutePayoutsResult
 
   const results: ExecutePayoutsResult["payouts"] = [];
 
+  const jpycAddress = config.jpycTokenAddress as `0x${string}`;
+
   for (const payout of pendingPayouts) {
-    // EVM payment tx: operator sends ETH to winner
+    // Generate JPYC transfer tx from operator to winner
     const payoutTx = {
       from: market.operator_address || config.operatorAddress,
-      to: payout.user_id,
-      value: "0x" + BigInt(payout.amount_wei).toString(16),
+      to: jpycAddress,
+      data: encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: "transfer",
+        args: [payout.user_id as `0x${string}`, BigInt(payout.amount_wei)],
+      }),
     };
 
     results.push({

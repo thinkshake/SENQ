@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useWallet } from "@/contexts/WalletContext"
 import { useT } from "@/contexts/LanguageContext"
-import { formatEth } from "@/lib/api"
+import { formatJpyc } from "@/lib/api"
 import { LanguageSwitcher } from "@/components/language-switcher"
 
 const navItems = [
@@ -51,7 +51,7 @@ export function SiteHeader() {
           {wallet.connected ? (
             <>
               <span className="hidden font-mono text-sm text-foreground sm:inline-block">
-                {wallet.balance ? formatEth(wallet.balance) : "..."}
+                {wallet.balance ? formatJpyc(wallet.balance) : "..."}
               </span>
               <button
                 onClick={wallet.disconnect}

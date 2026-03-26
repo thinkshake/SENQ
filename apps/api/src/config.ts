@@ -26,6 +26,12 @@ export const config = {
   /** SENQMarket contract address */
   evmContractAddress: process.env.EVM_CONTRACT_ADDRESS || "",
 
+  /** JPYC token contract address */
+  jpycTokenAddress: process.env.JPYC_TOKEN_ADDRESS || "",
+
+  /** JPYC token decimals */
+  jpycDecimals: parseInt(process.env.JPYC_DECIMALS || "18", 10),
+
   /** Admin API key for privileged operations */
   adminApiKey: process.env.ADMIN_API_KEY || "",
 } as const;
@@ -42,6 +48,9 @@ export function validateConfig(): string[] {
     }
     if (!config.adminApiKey) {
       errors.push("ADMIN_API_KEY is required in production");
+    }
+    if (!config.jpycTokenAddress) {
+      errors.push("JPYC_TOKEN_ADDRESS is required in production");
     }
   }
 

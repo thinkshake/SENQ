@@ -4,16 +4,59 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "../src/SENQMarket.sol";
 
+contract MockJPYC {
+    string public name = "Mock JPYC";
+    string public symbol = "JPYC";
+    uint8 public decimals = 18;
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+        totalSupply += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(balanceOf[from] >= amount, "Insufficient balance");
+        require(allowance[from][msg.sender] >= amount, "Insufficient allowance");
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        allowance[from][msg.sender] -= amount;
+        return true;
+    }
+}
+
 contract SENQMarketTest is Test {
     SENQMarket market;
+    MockJPYC jpyc;
     address owner = address(this);
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
 
     function setUp() public {
-        market = new SENQMarket();
-        vm.deal(alice, 100 ether);
-        vm.deal(bob, 100 ether);
+        jpyc = new MockJPYC();
+        market = new SENQMarket(address(jpyc));
+
+        jpyc.mint(alice, 100000 ether);
+        jpyc.mint(bob, 100000 ether);
+
+        vm.prank(alice);
+        jpyc.approve(address(market), type(uint256).max);
+        vm.prank(bob);
+        jpyc.approve(address(market), type(uint256).max);
     }
 
     // ── Helpers ────────────────────────────────────────────────────
@@ -24,10 +67,10 @@ contract SENQMarketTest is Test {
 
     function _placeBets(uint256 marketId) internal {
         vm.prank(alice);
-        market.betYes{value: 3 ether}(marketId);
+        market.betYes(marketId, 3000 ether);
 
         vm.prank(bob);
-        market.betNo{value: 1 ether}(marketId);
+        market.betNo(marketId, 1000 ether);
     }
 
     // ── Happy path: YES wins ───────────────────────────────────────
@@ -41,15 +84,15 @@ contract SENQMarketTest is Test {
         market.resolve(id, true);
 
         // Alice (YES bettor) claims
-        uint256 balBefore = alice.balance;
+        uint256 balBefore = jpyc.balanceOf(alice);
         vm.prank(alice);
         market.claimPayout(id);
-        uint256 balAfter = alice.balance;
+        uint256 balAfter = jpyc.balanceOf(alice);
 
-        // Total pool = 4 ETH, fee = 2% of losing pool (1 ETH) = 0.02 ETH
-        // Distributable = 4 - 0.02 = 3.98 ETH
+        // Total pool = 4000 JPYC, fee = 2% of losing pool (1000) = 20 JPYC
+        // Distributable = 4000 - 20 = 3980 JPYC
         // Alice gets all of it (only YES bettor)
-        uint256 expectedPayout = 3.98 ether;
+        uint256 expectedPayout = 3980 ether;
         assertEq(balAfter - balBefore, expectedPayout);
     }
 
@@ -62,14 +105,14 @@ contract SENQMarketTest is Test {
         vm.warp(block.timestamp + 1 days);
         market.resolve(id, false);
 
-        uint256 balBefore = bob.balance;
+        uint256 balBefore = jpyc.balanceOf(bob);
         vm.prank(bob);
         market.claimPayout(id);
-        uint256 balAfter = bob.balance;
+        uint256 balAfter = jpyc.balanceOf(bob);
 
-        // Total pool = 4 ETH, fee = 2% of losing pool (3 ETH) = 0.06 ETH
-        // Distributable = 4 - 0.06 = 3.94 ETH
-        uint256 expectedPayout = 3.94 ether;
+        // Total pool = 4000 JPYC, fee = 2% of losing pool (3000) = 60 JPYC
+        // Distributable = 4000 - 60 = 3940 JPYC
+        uint256 expectedPayout = 3940 ether;
         assertEq(balAfter - balBefore, expectedPayout);
     }
 
@@ -82,7 +125,7 @@ contract SENQMarketTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("Betting closed");
-        market.betYes{value: 1 ether}(id);
+        market.betYes(id, 1000 ether);
     }
 
     // ── Cannot resolve before deadline ─────────────────────────────
@@ -119,15 +162,15 @@ contract SENQMarketTest is Test {
 
         market.cancelMarket(id);
 
-        uint256 aliceBefore = alice.balance;
+        uint256 aliceBefore = jpyc.balanceOf(alice);
         vm.prank(alice);
         market.claimRefund(id);
-        assertEq(alice.balance - aliceBefore, 3 ether);
+        assertEq(jpyc.balanceOf(alice) - aliceBefore, 3000 ether);
 
-        uint256 bobBefore = bob.balance;
+        uint256 bobBefore = jpyc.balanceOf(bob);
         vm.prank(bob);
         market.claimRefund(id);
-        assertEq(bob.balance - bobBefore, 1 ether);
+        assertEq(jpyc.balanceOf(bob) - bobBefore, 1000 ether);
     }
 
     // ── Cannot refund twice ────────────────────────────────────────
@@ -157,12 +200,12 @@ contract SENQMarketTest is Test {
         vm.prank(alice);
         market.claimPayout(id);
 
-        // Fee = 2% of losing pool (1 ETH) = 0.02 ETH
-        assertEq(market.accumulatedFees(), 0.02 ether);
+        // Fee = 2% of losing pool (1000 JPYC) = 20 JPYC
+        assertEq(market.accumulatedFees(), 20 ether);
 
-        uint256 ownerBefore = owner.balance;
+        uint256 ownerBefore = jpyc.balanceOf(owner);
         market.withdrawFees();
-        assertEq(owner.balance - ownerBefore, 0.02 ether);
+        assertEq(jpyc.balanceOf(owner) - ownerBefore, 20 ether);
         assertEq(market.accumulatedFees(), 0);
     }
 
@@ -188,14 +231,28 @@ contract SENQMarketTest is Test {
         market.cancelMarket(id);
     }
 
-    // ── Must send ETH to bet ───────────────────────────────────────
+    // ── Must send JPYC to bet ──────────────────────────────────────
 
-    function test_mustSendEthToBet() public {
+    function test_mustSendJpycToBet() public {
         uint256 id = _createMarket();
 
         vm.prank(alice);
-        vm.expectRevert("Must send ETH");
-        market.betYes{value: 0}(id);
+        vm.expectRevert("Must send JPYC");
+        market.betYes(id, 0);
+    }
+
+    // ── Must approve before bet ────────────────────────────────────
+
+    function test_mustApproveBeforeBet() public {
+        uint256 id = _createMarket();
+
+        address carol = address(0xCA201);
+        jpyc.mint(carol, 100000 ether);
+
+        // Carol has not approved the market contract
+        vm.prank(carol);
+        vm.expectRevert("Insufficient allowance");
+        market.betYes(id, 1000 ether);
     }
 
     // ── Transfer ownership ─────────────────────────────────────────
@@ -217,34 +274,33 @@ contract SENQMarketTest is Test {
     function test_multipleBettorsProportionalPayout() public {
         uint256 id = _createMarket();
 
-        // Alice bets 3 YES, Bob bets 1 YES
+        // Alice bets 3000 YES, Bob bets 1000 YES
         vm.prank(alice);
-        market.betYes{value: 3 ether}(id);
+        market.betYes(id, 3000 ether);
         vm.prank(bob);
-        market.betYes{value: 1 ether}(id);
+        market.betYes(id, 1000 ether);
 
-        // carol bets 4 NO
+        // carol bets 4000 NO
         address carol = address(0xCA201);
-        vm.deal(carol, 100 ether);
+        jpyc.mint(carol, 100000 ether);
         vm.prank(carol);
-        market.betNo{value: 4 ether}(id);
+        jpyc.approve(address(market), type(uint256).max);
+        vm.prank(carol);
+        market.betNo(id, 4000 ether);
 
         vm.warp(block.timestamp + 1 days);
         market.resolve(id, true);
 
-        // Total pool = 8 ETH, fee = 2% of 4 = 0.08 ETH, distributable = 7.92
-        // Alice: 7.92 * 3/4 = 5.94, Bob: 7.92 * 1/4 = 1.98
-        uint256 aliceBefore = alice.balance;
+        // Total pool = 8000 JPYC, fee = 2% of 4000 = 80 JPYC, distributable = 7920
+        // Alice: 7920 * 3000/4000 = 5940, Bob: 7920 * 1000/4000 = 1980
+        uint256 aliceBefore = jpyc.balanceOf(alice);
         vm.prank(alice);
         market.claimPayout(id);
-        assertEq(alice.balance - aliceBefore, 5.94 ether);
+        assertEq(jpyc.balanceOf(alice) - aliceBefore, 5940 ether);
 
-        uint256 bobBefore = bob.balance;
+        uint256 bobBefore = jpyc.balanceOf(bob);
         vm.prank(bob);
         market.claimPayout(id);
-        assertEq(bob.balance - bobBefore, 1.98 ether);
+        assertEq(jpyc.balanceOf(bob) - bobBefore, 1980 ether);
     }
-
-    // Allow contract to receive ETH (for fee withdrawal)
-    receive() external payable {}
 }

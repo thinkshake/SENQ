@@ -9,9 +9,9 @@ import {
   type Outcome,
   placeBet,
   confirmBet,
-  formatEth,
-  ethToWei,
-  weiToEth,
+  formatJpyc,
+  jpycToWei,
+  weiToJpyc,
 } from "@/lib/api"
 
 type BetPanelProps = {
@@ -20,8 +20,8 @@ type BetPanelProps = {
   onBetPlaced: () => void
 }
 
-// Quick-select amounts in ETH
-const quickAmounts = [0.001, 0.01, 0.1, 1]
+// Quick-select amounts in JPYC
+const quickAmounts = [100, 500, 1000, 5000]
 
 export function BetPanel({
   marketId,
@@ -38,7 +38,7 @@ export function BetPanel({
   const [betConfirmed, setBetConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const balance = wallet.balance ? weiToEth(wallet.balance) : null
+  const balance = wallet.balance ? weiToJpyc(wallet.balance) : null
   const weightScore = user.weightScore
 
   const effectiveAmount = useMemo(
@@ -92,7 +92,7 @@ export function BetPanel({
     setError(null)
 
     try {
-      const amountWei = ethToWei(amount)
+      const amountWei = jpycToWei(amount)
       const result = await placeBet(
         marketId,
         selectedOutcome.id,
@@ -100,8 +100,18 @@ export function BetPanel({
         wallet.address,
       )
 
-      // Submit EVM payment transaction via MetaMask
-      const txResult = await wallet.signAndSubmitTransaction(result.unsignedTx)
+      // Step 1: Sign approve tx if needed
+      if (result.approveTx) {
+        const approveResult = await wallet.signAndSubmitTransaction(result.approveTx)
+        if (!approveResult?.hash) {
+          throw new Error(t.betPanel.txRejected)
+        }
+        // Wait briefly for approval to be mined
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+      }
+
+      // Step 2: Sign bet tx
+      const txResult = await wallet.signAndSubmitTransaction(result.betTx)
       if (!txResult?.hash) {
         throw new Error(t.betPanel.txRejected)
       }
@@ -150,7 +160,7 @@ export function BetPanel({
           id="bet-amount"
           type="number"
           min={0}
-          step={0.001}
+          step={1}
           value={inputValue}
           onChange={(e) => handleAmountChange(e.target.value)}
           placeholder="0"
@@ -171,7 +181,7 @@ export function BetPanel({
                   : "border-border text-foreground hover:border-foreground disabled:cursor-not-allowed disabled:opacity-40"
               )}
             >
-              {q} ETH
+              {q} JPYC
             </button>
           ))}
         </div>
@@ -180,7 +190,7 @@ export function BetPanel({
           <p className="mt-2 text-xs text-muted-foreground">
             {t.betPanel.available}{" "}
             <span className="font-mono">
-              {wallet.balance ? formatEth(wallet.balance) : t.betPanel.loading}
+              {wallet.balance ? formatJpyc(wallet.balance) : t.betPanel.loading}
             </span>
             {insufficientBalance && (
               <span className="ml-2 text-destructive">{t.betPanel.insufficientShort}</span>
@@ -225,7 +235,7 @@ export function BetPanel({
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{t.betPanel.betAmountLabel}</span>
             <span className="font-mono text-foreground">
-              {amount} ETH
+              {amount} JPYC
             </span>
           </div>
           <div className="mt-1.5 flex items-center justify-between text-sm">
@@ -240,7 +250,7 @@ export function BetPanel({
               {t.betPanel.effectiveBet}
             </span>
             <span className="font-mono text-base font-bold text-foreground">
-              {effectiveAmount} ETH
+              {effectiveAmount} JPYC
             </span>
           </div>
         </div>

@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: MIT
-// Parimutuel prediction market — ETH only, owner-only resolution
+// Parimutuel prediction market — ERC20 (JPYC) only, owner-only resolution
 pragma solidity ^0.8.24;
+
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+}
 
 contract SENQMarket {
     // ── Types ──────────────────────────────────────────────────────
@@ -21,6 +30,8 @@ contract SENQMarket {
     uint256 public feePercent;
     uint256 public accumulatedFees;
     uint256 public nextMarketId;
+
+    IERC20 public immutable jpyc;
 
     mapping(uint256 => Market) public markets;
     mapping(uint256 => mapping(address => uint256)) public yesBets;
@@ -45,9 +56,10 @@ contract SENQMarket {
 
     // ── Constructor ────────────────────────────────────────────────
 
-    constructor() {
+    constructor(address _jpycToken) {
         owner = msg.sender;
         feePercent = 2;
+        jpyc = IERC20(_jpycToken);
     }
 
     // ── Market lifecycle ───────────────────────────────────────────
@@ -69,30 +81,34 @@ contract SENQMarket {
         emit MarketCreated(marketId, question, bettingDeadline);
     }
 
-    function betYes(uint256 marketId) external payable {
+    function betYes(uint256 marketId, uint256 amount) external {
         Market storage m = markets[marketId];
         require(m.bettingDeadline > 0, "Market does not exist");
         require(block.timestamp < m.bettingDeadline, "Betting closed");
         require(!m.cancelled, "Market cancelled");
-        require(msg.value > 0, "Must send ETH");
+        require(amount > 0, "Must send JPYC");
 
-        m.totalYes += msg.value;
-        yesBets[marketId][msg.sender] += msg.value;
+        require(jpyc.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
-        emit BetPlaced(marketId, msg.sender, true, msg.value);
+        m.totalYes += amount;
+        yesBets[marketId][msg.sender] += amount;
+
+        emit BetPlaced(marketId, msg.sender, true, amount);
     }
 
-    function betNo(uint256 marketId) external payable {
+    function betNo(uint256 marketId, uint256 amount) external {
         Market storage m = markets[marketId];
         require(m.bettingDeadline > 0, "Market does not exist");
         require(block.timestamp < m.bettingDeadline, "Betting closed");
         require(!m.cancelled, "Market cancelled");
-        require(msg.value > 0, "Must send ETH");
+        require(amount > 0, "Must send JPYC");
 
-        m.totalNo += msg.value;
-        noBets[marketId][msg.sender] += msg.value;
+        require(jpyc.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
-        emit BetPlaced(marketId, msg.sender, false, msg.value);
+        m.totalNo += amount;
+        noBets[marketId][msg.sender] += amount;
+
+        emit BetPlaced(marketId, msg.sender, false, amount);
     }
 
     function resolve(uint256 marketId, bool outcome) external onlyOwner {
@@ -138,8 +154,7 @@ contract SENQMarket {
 
         accumulatedFees += fee * userBet / winningPool;
 
-        (bool sent, ) = msg.sender.call{value: payout}("");
-        require(sent, "Transfer failed");
+        require(jpyc.transfer(msg.sender, payout), "Transfer failed");
 
         emit PayoutClaimed(marketId, msg.sender, payout);
     }
@@ -167,8 +182,7 @@ contract SENQMarket {
 
         claimed[marketId][msg.sender] = true;
 
-        (bool sent, ) = msg.sender.call{value: refund}("");
-        require(sent, "Transfer failed");
+        require(jpyc.transfer(msg.sender, refund), "Transfer failed");
 
         emit RefundClaimed(marketId, msg.sender, refund);
     }
@@ -180,8 +194,7 @@ contract SENQMarket {
         require(fees > 0, "No fees");
         accumulatedFees = 0;
 
-        (bool sent, ) = owner.call{value: fees}("");
-        require(sent, "Transfer failed");
+        require(jpyc.transfer(owner, fees), "Transfer failed");
     }
 
     function setFeePercent(uint256 _feePercent) external onlyOwner {

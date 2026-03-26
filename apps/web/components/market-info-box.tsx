@@ -1,6 +1,6 @@
 "use client"
 
-import { formatEth } from "@/lib/api"
+import { formatJpyc } from "@/lib/api"
 import { useT, useLanguage } from "@/contexts/LanguageContext"
 import { getDateLocale } from "@/lib/format"
 
@@ -30,7 +30,7 @@ export function MarketInfoBox({
   }
 
   const rows = [
-    { label: t.marketInfoBox.totalVolume, value: formatEth(totalPoolWei) },
+    { label: t.marketInfoBox.totalVolume, value: formatJpyc(totalPoolWei) },
     { label: t.marketInfoBox.participantsLabel, value: t.marketInfoBox.participants(participants) },
     { label: t.marketInfoBox.createdDate, value: formatDate(createdAt) },
     { label: t.marketInfoBox.endDate, value: formatDate(endDate) },

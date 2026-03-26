@@ -60,7 +60,7 @@ export const en: Translations = {
   betPanel: {
     selected: "Selected",
     selectOutcome: "Click an outcome to select",
-    betAmount: "Bet Amount (ETH)",
+    betAmount: "Bet Amount (JPYC)",
     selectOutcomeError: "Please select an outcome",
     enterAmountError: "Please enter an amount",
     insufficientBalance: "Insufficient balance",

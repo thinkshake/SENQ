@@ -26,6 +26,7 @@ app.use(
 
 // Routes
 app.route("/", healthRoutes);
+app.route("/api", healthRoutes);
 app.route("/api/markets", marketsRoutes);
 app.route("/api", betsRoutes);
 app.route("/api", offersRoutes);

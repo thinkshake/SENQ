@@ -60,7 +60,7 @@ export const ja: Translations = {
   betPanel: {
     selected: "\u9078\u629e\u4e2d",
     selectOutcome: "\u9078\u629e\u80a2\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u304f\u3060\u3055\u3044",
-    betAmount: "\u30d9\u30c3\u30c8\u91d1\u984d (ETH)",
+    betAmount: "\u30d9\u30c3\u30c8\u91d1\u984d (JPYC)",
     selectOutcomeError: "\u9078\u629e\u80a2\u3092\u9078\u3093\u3067\u304f\u3060\u3055\u3044",
     enterAmountError: "\u91d1\u984d\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044",
     insufficientBalance: "\u6b8b\u9ad8\u304c\u4e0d\u8db3\u3057\u3066\u3044\u307e\u3059",

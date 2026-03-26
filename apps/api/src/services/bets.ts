@@ -2,6 +2,7 @@
  * Bets service - business logic for placing and managing bets.
  */
 import { config } from "../config";
+import { encodeFunctionData } from "viem";
 import {
   createBet,
   getBetById,
@@ -34,6 +35,7 @@ import {
   calculateWeightScore,
 } from "../db/models/user-attributes";
 import { getOrCreateUser, getUserById } from "../db/models/users";
+import { getJpycAllowance, CONTRACT_ADDRESS, ERC20_ABI } from "../evm/client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -48,7 +50,8 @@ export interface PlaceBetResult {
   bet: Bet;
   weightScore: number;
   effectiveAmountWei: string;
-  paymentTx: unknown;
+  approveTx: unknown | null;
+  betTx: unknown;
 }
 
 export interface ConfirmBetInput {
@@ -62,7 +65,7 @@ export interface ConfirmBetInput {
  * Create a bet intent for a multi-outcome market.
  * Returns an EVM payment tx object for the user to sign and submit.
  */
-export function placeBet(input: PlaceBetInput): PlaceBetResult {
+export async function placeBet(input: PlaceBetInput): Promise<PlaceBetResult> {
   const amount = BigInt(input.amountWei);
   if (amount <= 0n) {
     throw new Error("Bet amount must be positive");
@@ -80,7 +83,9 @@ export function placeBet(input: PlaceBetInput): PlaceBetResult {
 
   const attributes = getAttributesForUser(input.userAddress);
   const weightScore = calculateWeightScore(attributes);
-  const effectiveAmountWei = Math.round(Number(input.amountWei) * weightScore).toString();
+  // Use BigInt math to avoid scientific notation in large numbers
+  const weightBps = BigInt(Math.round(weightScore * 10000));
+  const effectiveAmountWei = (BigInt(input.amountWei) * weightBps / 10000n).toString();
 
   const bet = createBet({
     marketId: input.marketId,
@@ -93,24 +98,53 @@ export function placeBet(input: PlaceBetInput): PlaceBetResult {
     memoJson: JSON.stringify({ marketId: input.marketId, outcomeId: input.outcomeId }),
   });
 
-  const operatorAddress = market.operator_address || config.operatorAddress;
+  const contractAddress = CONTRACT_ADDRESS;
+  const jpycAddress = config.jpycTokenAddress as `0x${string}`;
 
-  if (!operatorAddress) {
-    throw new Error("Operator address not configured");
+  // Check current JPYC allowance
+  let approveTx: unknown | null = null;
+  try {
+    const currentAllowance = await getJpycAllowance(
+      input.userAddress as `0x${string}`,
+      contractAddress
+    );
+    if (currentAllowance < amount) {
+      // Generate approve tx for max uint256
+      approveTx = {
+        from: input.userAddress,
+        to: jpycAddress,
+        data: encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [contractAddress, BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")],
+        }),
+      };
+    }
+  } catch {
+    // If allowance check fails, include approve tx as safety
+    approveTx = {
+      from: input.userAddress,
+      to: jpycAddress,
+      data: encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [contractAddress, BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")],
+      }),
+    };
   }
 
-  if (operatorAddress.toLowerCase() === input.userAddress.toLowerCase()) {
-    throw new Error("Cannot place bet: operator address cannot be the same as bettor address");
-  }
-
-  // EVM payment transaction: user sends ETH to operator
-  const paymentTx = {
+  // Generate bet tx: JPYC transfer to the contract address
+  const betTx = {
     from: input.userAddress,
-    to: operatorAddress,
-    value: "0x" + amount.toString(16),
+    to: jpycAddress,
+    data: encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: "transfer",
+      args: [contractAddress, amount],
+    }),
   };
 
-  return { bet, weightScore, effectiveAmountWei, paymentTx };
+  return { bet, weightScore, effectiveAmountWei, approveTx, betTx };
 }
 
 /**
@@ -177,7 +211,8 @@ export function calculatePotentialPayout(
     const attributes = getAttributesForUser(userAddress);
     weightScore = calculateWeightScore(attributes);
   }
-  const effectiveAmount = Math.round(Number(amountWei) * weightScore).toString();
+  const wBps = BigInt(Math.round(weightScore * 10000));
+  const effectiveAmount = (BigInt(amountWei) * wBps / 10000n).toString();
 
   const outcomes = getOutcomesWithProbability(marketId);
   const targetOutcome = outcomes.find((o) => o.id === outcomeId);

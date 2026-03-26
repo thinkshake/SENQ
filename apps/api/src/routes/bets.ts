@@ -47,7 +47,7 @@ bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (
   }
 
   try {
-    const result = placeBet({
+    const result = await placeBet({
       marketId,
       outcomeId: body.outcomeId,
       amountWei: body.amountWei,
@@ -64,7 +64,8 @@ bets.post("/markets/:marketId/bets", zValidator("json", placeBetSchema), async (
       },
       weightScore: result.weightScore,
       effectiveAmountWei: result.effectiveAmountWei,
-      unsignedTx: result.paymentTx,
+      approveTx: result.approveTx,
+      betTx: result.betTx,
     }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create bet";

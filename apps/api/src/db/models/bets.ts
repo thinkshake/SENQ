@@ -47,7 +47,7 @@ export function createBet(bet: BetInsert): Bet {
   const weightScore = bet.weightScore ?? 1.0;
   const effectiveAmountWei =
     bet.effectiveAmountWei ??
-    Math.round(Number(bet.amountWei) * weightScore).toString();
+    (BigInt(bet.amountWei) * BigInt(Math.round(weightScore * 10000)) / 10000n).toString();
 
   db.query(
     `INSERT INTO bets (id, market_id, user_id, outcome, outcome_id, amount_wei,
@@ -117,18 +117,17 @@ export function listConfirmedBetsByOutcomeId(marketId: string, outcomeId: string
 
 export function getTotalEffectiveAmount(marketId: string, outcomeId?: string): string {
   const db = getDb();
+  let rows: { effective_amount_wei: string }[];
   if (outcomeId) {
-    const result = db.query(
-      `SELECT COALESCE(SUM(CAST(effective_amount_wei AS INTEGER)), 0) as total
-       FROM bets WHERE market_id = ? AND outcome_id = ? AND status = 'Confirmed'`
-    ).get(marketId, outcomeId) as { total: number };
-    return result.total.toString();
+    rows = db.query(
+      `SELECT effective_amount_wei FROM bets WHERE market_id = ? AND outcome_id = ? AND status = 'Confirmed'`
+    ).all(marketId, outcomeId) as { effective_amount_wei: string }[];
+  } else {
+    rows = db.query(
+      `SELECT effective_amount_wei FROM bets WHERE market_id = ? AND status = 'Confirmed'`
+    ).all(marketId) as { effective_amount_wei: string }[];
   }
-  const result = db.query(
-    `SELECT COALESCE(SUM(CAST(effective_amount_wei AS INTEGER)), 0) as total
-     FROM bets WHERE market_id = ? AND status = 'Confirmed'`
-  ).get(marketId) as { total: number };
-  return result.total.toString();
+  return rows.reduce((sum, r) => sum + BigInt(r.effective_amount_wei || "0"), 0n).toString();
 }
 
 export function updateBet(id: string, update: BetUpdate): Bet | null {
@@ -148,18 +147,17 @@ export function updateBet(id: string, update: BetUpdate): Bet | null {
 
 export function getTotalBetAmount(marketId: string, outcome?: BetOutcome): string {
   const db = getDb();
+  let rows: { amount_wei: string }[];
   if (outcome) {
-    const result = db.query(
-      `SELECT COALESCE(SUM(CAST(amount_wei AS INTEGER)), 0) as total
-       FROM bets WHERE market_id = ? AND outcome = ? AND status = 'Confirmed'`
-    ).get(marketId, outcome) as { total: number };
-    return result.total.toString();
+    rows = db.query(
+      `SELECT amount_wei FROM bets WHERE market_id = ? AND outcome = ? AND status = 'Confirmed'`
+    ).all(marketId, outcome) as { amount_wei: string }[];
+  } else {
+    rows = db.query(
+      `SELECT amount_wei FROM bets WHERE market_id = ? AND status = 'Confirmed'`
+    ).all(marketId) as { amount_wei: string }[];
   }
-  const result = db.query(
-    `SELECT COALESCE(SUM(CAST(amount_wei AS INTEGER)), 0) as total
-     FROM bets WHERE market_id = ? AND status = 'Confirmed'`
-  ).get(marketId) as { total: number };
-  return result.total.toString();
+  return rows.reduce((sum, r) => sum + BigInt(r.amount_wei || "0"), 0n).toString();
 }
 
 export function getStalePendingBets(olderThanMinutes: number): Bet[] {

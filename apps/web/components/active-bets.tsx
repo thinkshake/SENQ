@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { formatEth, type UserBet } from "@/lib/api"
+import { formatJpyc, type UserBet } from "@/lib/api"
 import { useT, useLanguage } from "@/contexts/LanguageContext"
 import { getDateLocale } from "@/lib/format"
 
@@ -66,7 +66,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
               <div>
                 <span className="text-muted-foreground">{t.activeBets.betAmount} </span>
                 <span className="font-mono text-foreground">
-                  {formatEth(bet.amountWei)}
+                  {formatJpyc(bet.amountWei)}
                 </span>
               </div>
               {bet.weightScore > 1 && (
@@ -81,7 +81,7 @@ export function ActiveBets({ bets }: { bets: UserBet[] }) {
                 <div>
                   <span className="text-muted-foreground">{t.activeBets.effectiveAmount} </span>
                   <span className="font-mono text-foreground">
-                    {formatEth(bet.effectiveAmountWei)}
+                    {formatJpyc(bet.effectiveAmountWei)}
                   </span>
                 </div>
               )}

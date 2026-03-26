@@ -16,7 +16,8 @@ import {
 } from "../services/markets";
 import { config } from "../config";
 import { getOutcomesWithProbability } from "../db/models/outcomes";
-import { signAndSubmitWithOperator } from "../evm/client";
+import { CONTRACT_ADDRESS, ERC20_ABI } from "../evm/client";
+import { encodeFunctionData } from "viem";
 
 const markets = new Hono();
 
@@ -210,7 +211,7 @@ markets.post("/:id/resolve", async (c) => {
   const totalPool = BigInt(market.pool_total_wei);
   const winningTotal = BigInt(getTotalEffectiveAmount(id, body.outcomeId));
 
-  const payoutResults: { betId: string; userId: string; amount: string; txHash?: string; error?: string }[] = [];
+  const payoutResults: { betId: string; userId: string; amount: string; payoutTx?: unknown }[] = [];
 
   if (winningTotal > 0n && winningBets.length > 0) {
     for (const bet of winningBets) {
@@ -231,44 +232,25 @@ markets.post("/:id/resolve", async (c) => {
         amountWei: payoutAmount.toString(),
       });
 
-      // Auto-execute payout if operator private key is configured
-      if (config.operatorPrivateKey) {
-        try {
-          const result = await signAndSubmitWithOperator(
-            user.wallet_address as `0x${string}`,
-            payoutAmount
-          );
-          updatePayout(payout.id, { status: "Sent", payoutTx: result.hash });
+      // Generate JPYC transfer tx from operator to winner
+      const jpycAddress = config.jpycTokenAddress as `0x${string}`;
+      const payoutTx = {
+        from: config.evmOperatorAddress,
+        to: jpycAddress,
+        data: encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: "transfer",
+          args: [user.wallet_address as `0x${string}`, payoutAmount],
+        }),
+      };
 
-          payoutResults.push({
-            betId: bet.id,
-            userId: user.wallet_address,
-            amount: payoutAmount.toString(),
-            txHash: result.hash,
-          });
-        } catch (err) {
-          console.error("[resolve] Payout failed for bet:", bet.id, err);
-          updatePayout(payout.id, { status: "Failed" });
-          payoutResults.push({
-            betId: bet.id,
-            userId: user.wallet_address,
-            amount: payoutAmount.toString(),
-            error: err instanceof Error ? err.message : "Unknown error",
-          });
-        }
-      } else {
-        console.log("[resolve] Skipping auto-payout (no EVM_OPERATOR_PRIVATE_KEY)");
-        payoutResults.push({
-          betId: bet.id,
-          userId: user.wallet_address,
-          amount: payoutAmount.toString(),
-        });
-      }
+      payoutResults.push({
+        betId: bet.id,
+        userId: user.wallet_address,
+        amount: payoutAmount.toString(),
+        payoutTx,
+      });
     }
-  }
-
-  if (config.operatorPrivateKey && payoutResults.every((p) => p.txHash)) {
-    updateMarket(id, { status: "Paid" });
   }
 
   return c.json({
