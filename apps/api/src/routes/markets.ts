@@ -30,11 +30,6 @@ const createMarketSchema = z.object({
   categoryLabel: z.string().max(50).optional(),
   bettingDeadline: z.string().datetime(),
   resolutionTime: z.string().datetime().optional(),
-  outcomes: z
-    .array(z.object({ label: z.string().min(1).max(200) }))
-    .min(2)
-    .max(5)
-    .optional(),
 });
 
 const updateMarketSchema = z.object({
@@ -254,32 +249,16 @@ markets.post("/:id/resolve", async (c) => {
         amountWei: payoutAmount.toString(),
       });
 
-      // Generate payout tx
-      let payoutTx: unknown;
-      if (chainMarketId != null) {
-        // On-chain market: user calls claimPayout on contract
-        payoutTx = {
-          from: user.wallet_address,
-          to: CONTRACT_ADDRESS,
-          data: encodeFunctionData({
-            abi: SENQ_MARKET_ABI,
-            functionName: "claimPayout",
-            args: [BigInt(chainMarketId)],
-          }),
-        };
-      } else {
-        // Off-chain market: operator JPYC transfer
-        const jpycAddress = config.jpycTokenAddress as `0x${string}`;
-        payoutTx = {
-          from: config.operatorAddress,
-          to: jpycAddress,
-          data: encodeFunctionData({
-            abi: ERC20_ABI,
-            functionName: "transfer",
-            args: [user.wallet_address as `0x${string}`, payoutAmount],
-          }),
-        };
-      }
+      // Generate payout tx: user calls claimPayout on contract
+      const payoutTx = {
+        from: user.wallet_address,
+        to: CONTRACT_ADDRESS,
+        data: encodeFunctionData({
+          abi: SENQ_MARKET_ABI,
+          functionName: "claimPayout",
+          args: [BigInt(chainMarketId!)],
+        }),
+      };
 
       payoutResults.push({
         betId: bet.id,
@@ -325,6 +304,66 @@ markets.post("/:id/close", async (c) => {
   const updated = updateMarket(id, { status: "Closed" });
 
   return c.json({ data: { id: updated?.id, status: updated?.status } });
+});
+
+/**
+ * GET /markets/:id/claim-tx?address=0x... - Get claimPayout tx for a user
+ */
+markets.get("/:id/claim-tx", async (c) => {
+  const id = c.req.param("id");
+  const address = c.req.query("address");
+
+  if (!address) {
+    return c.json({ error: { code: "VALIDATION_ERROR", message: "address query param is required" } }, 400);
+  }
+
+  const market = getMarket(id);
+  if (!market) {
+    return c.json({ error: { code: "MARKET_NOT_FOUND", message: "Market not found" } }, 404);
+  }
+
+  if (market.status !== "Resolved" && market.status !== "Paid") {
+    return c.json({ error: { code: "VALIDATION_ERROR", message: "Market is not resolved" } }, 400);
+  }
+
+  const chainMarketId = market.chain_market_id;
+  if (chainMarketId == null) {
+    return c.json({ error: { code: "VALIDATION_ERROR", message: "Market is not on-chain" } }, 400);
+  }
+
+  // Check if user has a pending payout
+  const { getUserByWallet } = await import("../db/models/users");
+  const { listPayoutsByUser } = await import("../db/models/payouts");
+
+  const user = getUserByWallet(address);
+  if (!user) {
+    return c.json({ error: { code: "NOT_FOUND", message: "User not found" } }, 404);
+  }
+
+  const userPayouts = listPayoutsByUser(user.id);
+  const payout = userPayouts.find((p) => p.market_id === id);
+  if (!payout) {
+    return c.json({ error: { code: "NOT_FOUND", message: "No payout for this user" } }, 404);
+  }
+
+  const claimTx = {
+    from: address,
+    to: CONTRACT_ADDRESS,
+    data: encodeFunctionData({
+      abi: SENQ_MARKET_ABI,
+      functionName: "claimPayout",
+      args: [BigInt(chainMarketId)],
+    }),
+  };
+
+  return c.json({
+    data: {
+      payoutId: payout.id,
+      amountWei: payout.amount_wei,
+      status: payout.status,
+      claimTx,
+    },
+  });
 });
 
 export default markets;

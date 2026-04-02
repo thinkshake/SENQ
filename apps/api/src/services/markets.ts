@@ -29,7 +29,6 @@ export interface CreateMarketInput {
   categoryLabel?: string;
   bettingDeadline: string;
   resolutionTime?: string;
-  outcomes?: { label: string }[];
 }
 
 export interface CreateMarketResult {
@@ -51,10 +50,7 @@ export async function createNewMarket(
     throw new Error("Betting deadline must be in the future");
   }
 
-  const outcomes = input.outcomes ?? [{ label: "YES" }, { label: "NO" }];
-  if (outcomes.length < 2 || outcomes.length > 5) {
-    throw new Error("Markets must have 2-5 outcomes");
-  }
+  const outcomes = [{ label: "YES" }, { label: "NO" }];
 
   const marketData = {
     title: input.title,
@@ -70,28 +66,22 @@ export async function createNewMarket(
 
   const market = createMarketWithOutcomes(marketData);
 
-  // Binary markets (exactly 2 outcomes) → create on-chain
-  const isBinary = outcomes.length === 2;
-  if (isBinary) {
-    try {
-      const deadlineUnix = Math.floor(deadline.getTime() / 1000);
-      const { txHash, marketId: chainMarketId } = await createMarketOnChain(
-        input.title,
-        deadlineUnix
-      );
-      console.log("[createMarket] On-chain tx:", txHash, "chainMarketId:", chainMarketId.toString());
-      updateMarket(market.id, {
-        status: "Open",
-        chainMarketId: Number(chainMarketId),
-      });
-    } catch (err) {
-      console.error("[createMarket] On-chain creation failed:", err);
-      updateMarket(market.id, { status: "Stalled" });
-      return { market: getMarketWithOutcomes(market.id)! };
-    }
-  } else {
-    // Multi-outcome markets stay DB-only
-    updateMarket(market.id, { status: "Open" });
+  // Create market on-chain
+  try {
+    const deadlineUnix = Math.floor(deadline.getTime() / 1000);
+    const { txHash, marketId: chainMarketId } = await createMarketOnChain(
+      input.title,
+      deadlineUnix
+    );
+    console.log("[createMarket] On-chain tx:", txHash, "chainMarketId:", chainMarketId.toString());
+    updateMarket(market.id, {
+      status: "Open",
+      chainMarketId: Number(chainMarketId),
+    });
+  } catch (err) {
+    console.error("[createMarket] On-chain creation failed:", err);
+    updateMarket(market.id, { status: "Stalled" });
+    return { market: getMarketWithOutcomes(market.id)! };
   }
 
   return { market: getMarketWithOutcomes(market.id)! };

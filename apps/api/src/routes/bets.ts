@@ -15,6 +15,7 @@ import {
 } from "../services/bets";
 import { getMarket } from "../services/markets";
 import { getOutcomeById } from "../db/models/outcomes";
+import { getUserByWallet } from "../db/models/users";
 
 const bets = new Hono();
 
@@ -191,7 +192,11 @@ bets.get("/bets/:id", async (c) => {
  */
 bets.get("/users/:address/bets", async (c) => {
   const address = c.req.param("address");
-  const betList = getBetsForUser(address);
+  const user = getUserByWallet(address);
+  if (!user) {
+    return c.json({ bets: [], totalBets: 0, totalAmountWei: "0" });
+  }
+  const betList = getBetsForUser(user.id);
 
   const betsData = betList.map((bet) => {
     const market = getMarket(bet.market_id);

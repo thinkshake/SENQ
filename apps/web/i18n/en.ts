@@ -146,6 +146,10 @@ export const en: Translations = {
     recentBets: "Recent Bets",
     marketIs: (status) => `This market is ${status}`,
     result: "Result:",
+    claimAmount: "Your payout",
+    claimPayout: "Claim Payout",
+    claiming: "Claiming...",
+    claimSuccess: "Payout claimed successfully!",
   },
 
   myPage: {

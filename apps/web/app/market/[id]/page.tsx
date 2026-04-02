@@ -11,8 +11,10 @@ import { MarketInfoBox } from "@/components/market-info-box"
 import { PositionBox } from "@/components/position-box"
 import {
   getBetsForMarket,
+  getClaimTx,
   formatJpyc,
   type Bet,
+  type ClaimTxResponse,
 } from "@/lib/api"
 
 interface PageProps {
@@ -27,6 +29,10 @@ export default function MarketDetailPage({ params }: PageProps) {
 
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<string | null>(null)
   const [recentBets, setRecentBets] = useState<Bet[]>([])
+  const [claimData, setClaimData] = useState<ClaimTxResponse | null>(null)
+  const [claiming, setClaiming] = useState(false)
+  const [claimed, setClaimed] = useState(false)
+  const [claimError, setClaimError] = useState<string | null>(null)
 
   // Fetch recent bets
   const fetchBets = useCallback(() => {
@@ -39,6 +45,31 @@ export default function MarketDetailPage({ params }: PageProps) {
   useEffect(() => {
     fetchBets()
   }, [fetchBets])
+
+  // Fetch claim tx for resolved markets
+  useEffect(() => {
+    if (!market || !wallet.address) return
+    if (market.status !== "Resolved" && market.status !== "Paid") return
+    getClaimTx(id, wallet.address)
+      .then((data) => setClaimData(data))
+      .catch(() => setClaimData(null))
+  }, [id, market?.status, wallet.address])
+
+  const handleClaim = useCallback(async () => {
+    if (!claimData || !wallet.address) return
+    setClaiming(true)
+    setClaimError(null)
+    try {
+      const result = await wallet.signAndSubmitTransaction(claimData.claimTx)
+      if (!result?.hash) throw new Error(t.betPanel.txRejected)
+      setClaimed(true)
+    } catch (err) {
+      setClaimError(err instanceof Error ? err.message : "Claim failed")
+      setTimeout(() => setClaimError(null), 5000)
+    } finally {
+      setClaiming(false)
+    }
+  }, [claimData, wallet, t])
 
   const handleBetPlaced = useCallback(() => {
     refetch()
@@ -190,6 +221,30 @@ export default function MarketDetailPage({ params }: PageProps) {
                 <p className="mt-2 text-base font-semibold text-foreground">
                   {t.marketDetail.result} {market.outcomes.find((o) => o.id === market.resolvedOutcomeId)?.label}
                 </p>
+              )}
+              {claimData && !claimed && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-sm text-foreground">
+                    {t.marketDetail.claimAmount}: <span className="font-mono font-bold">{formatJpyc(claimData.amountWei)} JPYC</span>
+                  </p>
+                  {claimError && (
+                    <p className="mt-2 text-sm text-destructive">{claimError}</p>
+                  )}
+                  <button
+                    onClick={handleClaim}
+                    disabled={claiming}
+                    className="mt-3 h-10 w-full rounded-md bg-foreground text-sm font-medium text-background transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {claiming ? t.marketDetail.claiming : t.marketDetail.claimPayout}
+                  </button>
+                </div>
+              )}
+              {claimed && (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    {t.marketDetail.claimSuccess}
+                  </p>
+                </div>
               )}
             </div>
           )}

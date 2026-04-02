@@ -142,6 +142,10 @@ export interface Translations {
     recentBets: string
     marketIs: (status: string) => string
     result: string
+    claimAmount: string
+    claimPayout: string
+    claiming: string
+    claimSuccess: string
   }
 
   myPage: {

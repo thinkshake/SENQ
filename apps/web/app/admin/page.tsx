@@ -104,14 +104,14 @@ function CreateMarketDialog({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [outcomes, setOutcomes] = useState(["", ""]);
+  const outcomes = ["YES", "NO"];
 
   function reset() {
     setTitle("");
     setDescription("");
     setCategory("");
     setDeadline("");
-    setOutcomes(["", ""]);
+    // outcomes are fixed to YES/NO
   }
 
   function handleClose() {
@@ -120,8 +120,7 @@ function CreateMarketDialog({
   }
 
   async function handleCreate() {
-    const filteredOutcomes = outcomes.filter((o) => o.trim());
-    if (!title.trim() || !deadline || filteredOutcomes.length < 2) {
+    if (!title.trim() || !deadline) {
       toast({ title: t.admin.inputError, description: t.admin.fillRequired, variant: "destructive" });
       return;
     }
@@ -135,7 +134,7 @@ function CreateMarketDialog({
         category: category || undefined,
         categoryLabel: cat?.label,
         bettingDeadline: new Date(deadline).toISOString(),
-        outcomes: filteredOutcomes.map((label) => ({ label: label.trim() })),
+        outcomes: outcomes.map((label) => ({ label })),
       });
 
       toast({ title: t.admin.success, description: t.admin.marketPublished });
@@ -197,34 +196,7 @@ function CreateMarketDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label>{t.admin.outcomesLabel}</Label>
-            {outcomes.map((o, i) => (
-              <div key={i} className="flex gap-2">
-                <Input
-                  value={o}
-                  onChange={(e) => {
-                    const next = [...outcomes];
-                    next[i] = e.target.value;
-                    setOutcomes(next);
-                  }}
-                  placeholder={t.admin.outcomePlaceholder(i + 1)}
-                />
-                {outcomes.length > 2 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setOutcomes(outcomes.filter((_, j) => j !== i))}
-                  >
-                    {t.admin.deleteOutcome}
-                  </Button>
-                )}
-              </div>
-            ))}
-            {outcomes.length < 5 && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setOutcomes([...outcomes, ""])}>
-                {t.admin.addOutcome}
-              </Button>
-            )}
+            <p className="text-sm text-muted-foreground">YES / NO</p>
           </div>
         </div>
 

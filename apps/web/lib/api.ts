@@ -116,7 +116,11 @@ export async function getMarkets(params?: {
   category?: string;
 }): Promise<Market[]> {
   const searchParams = new URLSearchParams();
-  if (params?.status) searchParams.set("status", params.status);
+  if (params?.status) {
+    // API expects PascalCase (e.g. "Open", "Resolved")
+    const s = params.status;
+    searchParams.set("status", s.charAt(0).toUpperCase() + s.slice(1));
+  }
   if (params?.category && params.category !== "all")
     searchParams.set("category", params.category);
 
@@ -286,6 +290,17 @@ export async function getPayoutsForMarket(marketId: string): Promise<{
 
 export async function getPayoutsForUser(address: string): Promise<Payout[]> {
   return apiFetch<Payout[]>(`/users/${address}/payouts`);
+}
+
+export interface ClaimTxResponse {
+  payoutId: string;
+  amountWei: string;
+  status: string;
+  claimTx: { from: string; to: string; data: string };
+}
+
+export async function getClaimTx(marketId: string, address: string): Promise<ClaimTxResponse> {
+  return apiFetch<ClaimTxResponse>(`/markets/${marketId}/claim-tx?address=${address}`);
 }
 
 // ── Admin ─────────────────────────────────────────────────────────

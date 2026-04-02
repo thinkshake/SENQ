@@ -146,6 +146,10 @@ export const ja: Translations = {
     recentBets: "\u6700\u8fd1\u306e\u30d9\u30c3\u30c8",
     marketIs: (status) => `\u3053\u306e\u30de\u30fc\u30b1\u30c3\u30c8\u306f${status}\u3067\u3059`,
     result: "\u7d50\u679c:",
+    claimAmount: "\u3042\u306a\u305f\u306e\u5831\u916c",
+    claimPayout: "\u5831\u916c\u3092\u53d7\u3051\u53d6\u308b",
+    claiming: "\u51e6\u7406\u4e2d...",
+    claimSuccess: "\u5831\u916c\u3092\u53d7\u3051\u53d6\u308a\u307e\u3057\u305f\uff01",
   },
 
   myPage: {

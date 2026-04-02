@@ -133,37 +133,25 @@ export async function placeBet(input: PlaceBetInput): Promise<PlaceBetResult> {
     };
   }
 
-  // Generate bet tx
-  let betTx: unknown;
+  // Generate bet tx via contract
   const chainMarketId = market.chain_market_id;
-
-  if (chainMarketId != null) {
-    // On-chain binary market: call betYes/betNo on contract
-    const outcomes = getOutcomesWithProbability(input.marketId);
-    const outcomeIndex = outcomes.findIndex((o) => o.id === input.outcomeId);
-    const functionName = outcomeIndex === 0 ? "betYes" : "betNo";
-
-    betTx = {
-      from: input.userAddress,
-      to: contractAddress,
-      data: encodeFunctionData({
-        abi: SENQ_MARKET_ABI,
-        functionName,
-        args: [BigInt(chainMarketId), amount],
-      }),
-    };
-  } else {
-    // Multi-outcome or off-chain market: plain JPYC transfer
-    betTx = {
-      from: input.userAddress,
-      to: jpycAddress,
-      data: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "transfer",
-        args: [contractAddress, amount],
-      }),
-    };
+  if (chainMarketId == null) {
+    throw new Error("Market is not on-chain");
   }
+
+  const outcomes = getOutcomesWithProbability(input.marketId);
+  const outcomeIndex = outcomes.findIndex((o) => o.id === input.outcomeId);
+  const functionName = outcomeIndex === 0 ? "betYes" : "betNo";
+
+  const betTx = {
+    from: input.userAddress,
+    to: contractAddress,
+    data: encodeFunctionData({
+      abi: SENQ_MARKET_ABI,
+      functionName,
+      args: [BigInt(chainMarketId), amount],
+    }),
+  };
 
   return { bet, weightScore, effectiveAmountWei, approveTx, betTx };
 }
