@@ -40,7 +40,7 @@ Extend API endpoints to support multi-outcome markets and user attributes.
 - Accept `outcomeId` instead of `side`
 - Look up user attributes for weight calculation
 - Calculate `effectiveAmountDrops = amount × weightScore`
-- Build XRPL tx for correct outcome currency
+- Build EVM tx for correct outcome
 
 #### GET /markets/:id/preview
 - Accept `outcomeId`
@@ -92,7 +92,7 @@ New file: `apps/api/src/routes/categories.ts`
 - `addUserAttribute(address, type, label, weight)`
 - `calculateWeightScore(attributes)`
 
-### 2.6 Update XRPL Transaction Builder
+### 2.6 Update EVM Transaction Builder
 
 - `buildOutcomePaymentTx(market, outcome, amount, sender)`
 - Generate correct currency code for outcome

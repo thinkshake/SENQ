@@ -8,7 +8,7 @@ import { initDatabase, closeDatabase, getDb, generateId } from "./index";
 import { createMarketWithOutcomes } from "./models/markets";
 import { addAttribute } from "./models/user-attributes";
 
-// ── Demo data (from apps/mock/lib/markets-data.ts, XRP amounts) ───
+// ── Demo data (from apps/mock/lib/markets-data.ts) ───
 
 const DEMO_OPERATOR = "0x0000000000000000000000000000000000000001"; // EVM placeholder
 
@@ -103,14 +103,14 @@ const DEMO_MARKETS = [
 
 const DEMO_USER_ATTRIBUTES = [
   {
-    walletAddress: "rDemoUser1111111111111111111",
+    walletAddress: "0x1111111111111111111111111111111111111111",
     attributes: [
       { attributeType: "region" as const, attributeLabel: "宮城県在住", weight: 1.5 },
       { attributeType: "expertise" as const, attributeLabel: "政治学専攻", weight: 1.2 },
     ],
   },
   {
-    walletAddress: "rDemoUser2222222222222222222",
+    walletAddress: "0x2222222222222222222222222222222222222222",
     attributes: [
       { attributeType: "region" as const, attributeLabel: "東京都在住", weight: 1.3 },
       { attributeType: "experience" as const, attributeLabel: "金融業界5年", weight: 1.4 },

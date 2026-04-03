@@ -133,12 +133,12 @@ Response:
   "bet": { ... },
   "weightScore": 1.5,
   "effectiveAmountDrops": "15000000",
-  "unsignedTx": { /* XRPL transaction to sign */ }
+  "unsignedTx": { /* EVM transaction to sign */ }
 }
 ```
 
 #### POST /markets/:id/bets/:betId/confirm
-Confirm a bet after XRPL transaction.
+Confirm a bet after EVM transaction.
 
 Request:
 ```json

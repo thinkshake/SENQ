@@ -4,7 +4,7 @@
 Accepted — 2025-02-11
 
 ## Context
-Architecture decisions for a prediction market DApp submitted to the Japan Financial Infrastructure Innovation Program (JFIIP) hackathon. Hosted by Ripple × Web3 Salon × JETRO. Demo Day: February 24, 2026 (Japan FinTech Week).
+Architecture decisions for a prediction market DApp submitted to the Avalanche Build Games hackathon.
 
 ### Scoring Criteria
 | Criteria | Weight |

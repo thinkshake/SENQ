@@ -1,6 +1,6 @@
 # SENQ Demo Guide
 
-**Hackathon:** JFIIP Demo Day — February 24, 2026
+**Hackathon:** Avalanche Build Games
 **Duration:** 3 minutes
 **Audience:** Judges evaluating EVM feature usage
 

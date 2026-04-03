@@ -7,13 +7,13 @@ Implement homepage (market list) and market detail page with betting flow.
 
 1. **Homepage** — Market grid with filters
 2. **Market detail page** — Outcomes, betting panel
-3. **Betting flow** — GemWallet transaction signing
+3. **Betting flow** — MetaMask transaction signing
 
 ## Tasks
 
 ### 4.1 Migrate Site Header
 Copy and modify `apps/mock/components/site-header.tsx`:
-- Replace mock balance with GemWallet balance
+- Replace mock balance with MetaMask balance
 - Add connect/disconnect from WalletContext
 - Keep Japanese navigation: マーケット, マイページ
 - Show wallet address when connected
@@ -27,7 +27,7 @@ Copy `apps/mock/components/filter-bar.tsx`:
 ### 4.3 Create Market Card
 Copy and modify `apps/mock/components/market-card.tsx`:
 - Fetch probabilities from API
-- Format amounts as XRP (not JPYC)
+- Format amounts as JPYC
 - Link to `/market/[id]`
 - Show top 2-3 outcomes with percentages
 
@@ -53,15 +53,15 @@ Copy `apps/mock/components/outcomes-list.tsx`:
 
 ### 4.7 Create Market Info Box
 Copy `apps/mock/components/market-info-box.tsx`:
-- Total volume (XRP)
+- Total volume (JPYC)
 - Participant count
 - End date
 - Created date
 
 ### 4.8 Create Bet Panel
 Copy and heavily modify `apps/mock/components/bet-panel.tsx`:
-- Amount input in XRP (not JPYC)
-- Quick amounts: 1, 5, 10, 50 XRP
+- Amount input in JPYC
+- Quick amounts: 100, 500, 1000, 5000 JPYC
 - Show user's weight score from UserContext
 - Calculate effective amount
 - **Integration:** 
@@ -83,19 +83,19 @@ Modify `apps/web/app/market/[id]/page.tsx`:
 Full flow:
 ```
 1. User selects outcome
-2. User enters XRP amount
+2. User enters JPYC amount
 3. Preview shows effective amount (with weight)
 4. User clicks "予測する"
 5. POST /markets/:id/bets → get unsigned tx
-6. signAndSubmitTransaction(tx) → GemWallet popup
-7. User signs in GemWallet
+6. signAndSubmitTransaction(tx) → MetaMask popup
+7. User signs in MetaMask
 8. POST /markets/:id/bets/:id/confirm with txHash
 9. Show success toast
 10. Refetch market data to update probabilities
 ```
 
 Error handling:
-- User rejects in GemWallet → Show message
+- User rejects in MetaMask → Show message
 - Transaction fails → Show error with details
 - Network error → Retry option
 
@@ -108,7 +108,7 @@ Error handling:
 - [ ] Market detail shows all outcomes
 - [ ] Can select outcome for betting
 - [ ] Bet panel calculates effective amount
-- [ ] GemWallet signing works
+- [ ] MetaMask signing works
 - [ ] Bet confirmation updates UI
 - [ ] Toast notifications on success/error
 - [ ] All text in Japanese
@@ -117,6 +117,6 @@ Error handling:
 
 - Use `useCallback` for handlers to prevent re-renders
 - Debounce preview API calls (300ms)
-- Currency display: Always show 2 decimal places for XRP
+- Currency display: Always show 2 decimal places for JPYC
 - Test with 3+ outcome markets
 - Handle case: no wallet connected (show connect prompt)

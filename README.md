@@ -435,6 +435,6 @@ MIT
 
 ## Team
 
-Built for JFIIP Hackathon 2026 by:
+Built for Avalanche Build Games by:
 - [Shota](https://github.com/hitsuji-haneta) — Developer
 - [Aston](https://github.com/aston-ai) — AI Assistant
