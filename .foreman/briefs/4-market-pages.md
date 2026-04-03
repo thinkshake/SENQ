@@ -13,10 +13,10 @@
 
 ## Background
 
-SENQ is an XRPL-powered prediction market for the JFIIP hackathon (demo day: Feb 24, 2026). The initial implementation is complete with:
-- Backend API (Hono + SQLite + xrpl.js)
-- XRPL integration (Escrow, Issued Currency, Trust Lines, DEX, Multi-Sign, Memo)
-- Basic frontend (apps/web) with GemWallet integration
+SENQ is an prediction market on Avalanche C-Chain for the Avalanche Build Games hackathon. The initial implementation is complete with:
+- Backend API (Hono + SQLite + viem)
+- EVM integration (ERC20 JPYC, SENQMarket contract, Multi-Sign)
+- Basic frontend (apps/web) with MetaMask integration
 
 A team member created a new UI design in `apps/mock/` with superior design and new features. This migration integrates that UI with our existing backend while adding new capabilities.
 
@@ -25,9 +25,9 @@ A team member created a new UI design in `apps/mock/` with superior design and n
 1. Replace `apps/web` with the new UI from `apps/mock/`
 2. Add multi-outcome market support (not just YES/NO)
 3. Implement weighted betting system (user attributes affect bet weight)
-4. Integrate with existing XRPL backend
+4. Integrate with existing EVM backend
 5. Keep Japanese UI language
-6. Use XRP as currency (not JPYC from mock)
+6. Use JPYC as currency
 
 ## Non-Goals
 
@@ -55,10 +55,10 @@ A team member created a new UI design in `apps/mock/` with superior design and n
 ## Technical Constraints
 
 - Keep bun as package manager
-- Keep GemWallet as wallet (no other wallets)
-- Keep XRP as currency (convert JPYC references)
+- Keep MetaMask as wallet
+- Keep JPYC as currency
 - Keep existing API structure in apps/api
-- Must work with existing XRPL transaction builders
+- Must work with existing EVM transaction builders
 
 ## API Changes Required
 
@@ -81,18 +81,18 @@ A team member created a new UI design in `apps/mock/` with superior design and n
 
 1. Homepage shows market list with category filter
 2. Market detail shows all outcomes with probabilities
-3. Users can connect GemWallet and see their address
-4. Users can place bets on any outcome with XRP
+3. Users can connect MetaMask and see their address
+4. Users can place bets on any outcome with JPYC
 5. Bet amounts are multiplied by user's weight score
 6. Portfolio page shows user's positions
-7. All XRPL transactions work (escrow, tokens, etc.)
+7. All EVM transactions work (contract calls, JPYC transfers, etc.)
 
 ## Tech Stack
 
 - Frontend: Next.js 14+ (App Router), Tailwind CSS, shadcn/ui
-- Backend: Hono, SQLite, xrpl.js
-- Wallet: GemWallet (@gemwallet/api)
-- XRPL: Testnet
+- Backend: Hono, SQLite, viem
+- Wallet: MetaMask
+- Chain: Avalanche C-Chain (Fuji Testnet)
 
 ## Design Context
 
@@ -233,12 +233,12 @@ Response:
   "bet": { ... },
   "weightScore": 1.5,
   "effectiveAmountDrops": "15000000",
-  "unsignedTx": { /* XRPL transaction to sign */ }
+  "unsignedTx": { /* EVM transaction to sign */ }
 }
 ```
 
 #### POST /markets/:id/bets/:betId/confirm
-Confirm a bet after XRPL transaction.
+Confirm a bet after EVM transaction.
 
 Request:
 ```json
@@ -456,7 +456,7 @@ updated_at TEXT
 id TEXT PRIMARY KEY
 market_id TEXT REFERENCES markets(id)
 label TEXT NOT NULL  -- "村井嘉浩（現職）", "新人候補A", etc.
-currency_code TEXT  -- XRPL issued currency code for this outcome
+outcome_token TEXT  -- EVM outcome identifier
 total_amount_drops TEXT DEFAULT '0'  -- Total bet on this outcome
 display_order INTEGER DEFAULT 0
 created_at TEXT
@@ -555,7 +555,7 @@ apps/web/
 │   ├── active-bets.tsx      # Portfolio bets list
 │   └── ui/                  # shadcn components
 ├── contexts/
-│   └── WalletContext.tsx    # GemWallet state
+│   └── WalletContext.tsx    # MetaMask state
 ├── hooks/
 │   ├── useMarkets.ts        # Market data fetching
 │   ├── useUser.ts           # User attributes/bets
@@ -571,10 +571,10 @@ apps/web/
 
 | apps/mock | apps/web (new) | Changes |
 |-----------|---------------|---------|
-| site-header.tsx | site-header.tsx | Add GemWallet, XRP balance |
-| market-card.tsx | market-card.tsx | Fetch from API, XRP amounts |
+| site-header.tsx | site-header.tsx | Add MetaMask, JPYC balance |
+| market-card.tsx | market-card.tsx | Fetch from API, JPYC amounts |
 | market-detail.tsx | market-detail.tsx | API integration, wallet tx |
-| bet-panel.tsx | bet-panel.tsx | GemWallet signing, XRP |
+| bet-panel.tsx | bet-panel.tsx | MetaMask signing, JPYC |
 | outcomes-list.tsx | outcomes-list.tsx | Minimal changes |
 | filter-bar.tsx | filter-bar.tsx | Minimal changes |
 | my-page.tsx | mypage/page.tsx | API integration |
@@ -590,7 +590,7 @@ interface WalletState {
   connected: boolean;
   address: string | null;
   network: string | null;
-  balance: string | null;  // NEW: XRP balance in drops
+  balance: string | null;  // NEW: JPYC balance
   loading: boolean;
   error: string | null;
   gemWalletInstalled: boolean;
@@ -654,7 +654,7 @@ Page Load
 
 ## Currency Display
 
-Convert JPYC references to XRP:
+Use JPYC for all amounts:
 
 ```typescript
 // apps/mock (JPYC)
@@ -662,17 +662,17 @@ formatVolume(amount: number): string {
   return `¥${amount.toLocaleString("ja-JP")} JPYC`
 }
 
-// apps/web (XRP)
-formatXrp(drops: string): string {
+// apps/web (JPYC)
+formatJpyc(amount: string): string {
   const xrp = Number(drops) / 1_000_000;
-  return `${xrp.toLocaleString("ja-JP")} XRP`;
+  return `${jpyc.toLocaleString("ja-JP")} JPYC`;
 }
 ```
 
 UI changes:
-- "¥12,500 JPYC" → "12.5 XRP"
-- Quick amounts: 100, 500, 1000, 5000 JPYC → 1, 5, 10, 50 XRP
-- All internal amounts in drops (1 XRP = 1,000,000 drops)
+- "¥12,500 JPYC" — JPYC amounts displayed directly
+- Quick amounts: 100, 500, 1000, 5000 JPYC
+- All internal amounts in JPYC (18 decimals)
 
 ## Japanese Text
 
@@ -742,14 +742,14 @@ Each phase builds on the previous. No parallel execution.
 | schema-migration | Existing data migration | Keep old columns, add new ones |
 | api-extension | Breaking API changes | Version responses, update frontend in sync |
 | ui-foundation | shadcn version conflicts | Use apps/mock versions, test early |
-| market-pages | XRPL transaction changes | Multi-outcome tokens need new currency codes |
+| market-pages | EVM contract integration | Multi-outcome tokens need new currency codes |
 | user-features | Weight calculation edge cases | Cap at 0.5-3.0 range |
 
 ## Definition of Done
 
 - All phases complete
 - Docker compose runs successfully
-- GemWallet can connect
+- MetaMask can connect
 - Can view markets with multiple outcomes
 - Can place bet on any outcome
 - Portfolio shows positions
@@ -772,13 +772,13 @@ Implement homepage (market list) and market detail page with betting flow.
 
 1. **Homepage** — Market grid with filters
 2. **Market detail page** — Outcomes, betting panel
-3. **Betting flow** — GemWallet transaction signing
+3. **Betting flow** — MetaMask transaction signing
 
 ## Tasks
 
 ### 4.1 Migrate Site Header
 Copy and modify `apps/mock/components/site-header.tsx`:
-- Replace mock balance with GemWallet balance
+- Replace mock balance with MetaMask balance
 - Add connect/disconnect from WalletContext
 - Keep Japanese navigation: マーケット, マイページ
 - Show wallet address when connected
@@ -792,7 +792,7 @@ Copy `apps/mock/components/filter-bar.tsx`:
 ### 4.3 Create Market Card
 Copy and modify `apps/mock/components/market-card.tsx`:
 - Fetch probabilities from API
-- Format amounts as XRP (not JPYC)
+- Format amounts as JPYC
 - Link to `/market/[id]`
 - Show top 2-3 outcomes with percentages
 
@@ -818,15 +818,15 @@ Copy `apps/mock/components/outcomes-list.tsx`:
 
 ### 4.7 Create Market Info Box
 Copy `apps/mock/components/market-info-box.tsx`:
-- Total volume (XRP)
+- Total volume (JPYC)
 - Participant count
 - End date
 - Created date
 
 ### 4.8 Create Bet Panel
 Copy and heavily modify `apps/mock/components/bet-panel.tsx`:
-- Amount input in XRP (not JPYC)
-- Quick amounts: 1, 5, 10, 50 XRP
+- Amount input in JPYC
+- Quick amounts: 100, 500, 1000, 5000 JPYC
 - Show user's weight score from UserContext
 - Calculate effective amount
 - **Integration:** 
@@ -848,19 +848,19 @@ Modify `apps/web/app/market/[id]/page.tsx`:
 Full flow:
 ```
 1. User selects outcome
-2. User enters XRP amount
+2. User enters JPYC amount
 3. Preview shows effective amount (with weight)
 4. User clicks "予測する"
 5. POST /markets/:id/bets → get unsigned tx
-6. signAndSubmitTransaction(tx) → GemWallet popup
-7. User signs in GemWallet
+6. signAndSubmitTransaction(tx) → MetaMask popup
+7. User signs in MetaMask
 8. POST /markets/:id/bets/:id/confirm with txHash
 9. Show success toast
 10. Refetch market data to update probabilities
 ```
 
 Error handling:
-- User rejects in GemWallet → Show message
+- User rejects in MetaMask → Show message
 - Transaction fails → Show error with details
 - Network error → Retry option
 
@@ -873,7 +873,7 @@ Error handling:
 - [ ] Market detail shows all outcomes
 - [ ] Can select outcome for betting
 - [ ] Bet panel calculates effective amount
-- [ ] GemWallet signing works
+- [ ] MetaMask signing works
 - [ ] Bet confirmation updates UI
 - [ ] Toast notifications on success/error
 - [ ] All text in Japanese
@@ -882,7 +882,7 @@ Error handling:
 
 - Use `useCallback` for handlers to prevent re-renders
 - Debounce preview API calls (300ms)
-- Currency display: Always show 2 decimal places for XRP
+- Currency display: Always show 2 decimal places for JPYC
 - Test with 3+ outcome markets
 - Handle case: no wallet connected (show connect prompt)
 

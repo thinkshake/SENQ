@@ -26,7 +26,7 @@ apps/web/
 │   ├── active-bets.tsx      # Portfolio bets list
 │   └── ui/                  # shadcn components
 ├── contexts/
-│   └── WalletContext.tsx    # GemWallet state
+│   └── WalletContext.tsx    # MetaMask state
 ├── hooks/
 │   ├── useMarkets.ts        # Market data fetching
 │   ├── useUser.ts           # User attributes/bets
@@ -42,10 +42,10 @@ apps/web/
 
 | apps/mock | apps/web (new) | Changes |
 |-----------|---------------|---------|
-| site-header.tsx | site-header.tsx | Add GemWallet, XRP balance |
-| market-card.tsx | market-card.tsx | Fetch from API, XRP amounts |
+| site-header.tsx | site-header.tsx | Add MetaMask, JPYC balance |
+| market-card.tsx | market-card.tsx | Fetch from API, JPYC amounts |
 | market-detail.tsx | market-detail.tsx | API integration, wallet tx |
-| bet-panel.tsx | bet-panel.tsx | GemWallet signing, XRP |
+| bet-panel.tsx | bet-panel.tsx | MetaMask signing, JPYC |
 | outcomes-list.tsx | outcomes-list.tsx | Minimal changes |
 | filter-bar.tsx | filter-bar.tsx | Minimal changes |
 | my-page.tsx | mypage/page.tsx | API integration |
@@ -61,7 +61,7 @@ interface WalletState {
   connected: boolean;
   address: string | null;
   network: string | null;
-  balance: string | null;  // NEW: XRP balance in drops
+  balance: string | null;  // NEW: JPYC balance
   loading: boolean;
   error: string | null;
   gemWalletInstalled: boolean;
@@ -125,7 +125,7 @@ Page Load
 
 ## Currency Display
 
-Convert JPYC references to XRP:
+Use JPYC for all amounts:
 
 ```typescript
 // apps/mock (JPYC)
@@ -133,17 +133,17 @@ formatVolume(amount: number): string {
   return `¥${amount.toLocaleString("ja-JP")} JPYC`
 }
 
-// apps/web (XRP)
-formatXrp(drops: string): string {
+// apps/web (JPYC)
+formatJpyc(amount: string): string {
   const xrp = Number(drops) / 1_000_000;
-  return `${xrp.toLocaleString("ja-JP")} XRP`;
+  return `${jpyc.toLocaleString("ja-JP")} JPYC`;
 }
 ```
 
 UI changes:
-- "¥12,500 JPYC" → "12.5 XRP"
-- Quick amounts: 100, 500, 1000, 5000 JPYC → 1, 5, 10, 50 XRP
-- All internal amounts in drops (1 XRP = 1,000,000 drops)
+- "¥12,500 JPYC" — JPYC amounts displayed directly
+- Quick amounts: 100, 500, 1000, 5000 JPYC
+- All internal amounts in JPYC (18 decimals)
 
 ## Japanese Text
 

@@ -13,8 +13,6 @@ primary_region = 'nrt'
   DATABASE_PATH = '/data/mitate.db'
   NODE_ENV = 'production'
   PORT = '3001'
-  XRPL_RPC_URL = 'https://s.altnet.rippletest.net:51234'
-  XRPL_WS_URL = 'wss://s.altnet.rippletest.net:51233'
 
 [[mounts]]
   source = 'mitate_data'

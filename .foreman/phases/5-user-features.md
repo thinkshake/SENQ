@@ -15,10 +15,10 @@ Implement My Page with portfolio, positions, and attributes display.
 ### 5.1 Create Profile Section
 Copy and modify `apps/mock/components/profile-section.tsx`:
 - Show connected wallet address (truncated)
-- Show XRP balance from WalletContext
+- Show JPYC balance from WalletContext
 - Show weight score from UserContext
 - List verified attributes with weights
-- Link to XRPL Explorer for address
+- Link to Snowtrace for address
 
 ### 5.2 Create Position Box
 Copy `apps/mock/components/position-box.tsx`:
@@ -60,8 +60,8 @@ For each attribute:
 
 ### 5.8 Portfolio Summary Stats
 - Total bets placed
-- Total XRP bet
-- Total effective XRP (with weights)
+- Total JPYC bet
+- Total effective JPYC (with weights)
 - Active positions count
 
 ### 5.9 Handle Not Connected State

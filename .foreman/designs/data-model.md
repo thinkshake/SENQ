@@ -60,7 +60,7 @@ updated_at TEXT
 id TEXT PRIMARY KEY
 market_id TEXT REFERENCES markets(id)
 label TEXT NOT NULL  -- "村井嘉浩（現職）", "新人候補A", etc.
-currency_code TEXT  -- XRPL issued currency code for this outcome
+outcome_token TEXT  -- EVM outcome identifier
 total_amount_drops TEXT DEFAULT '0'  -- Total bet on this outcome
 display_order INTEGER DEFAULT 0
 created_at TEXT

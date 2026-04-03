@@ -87,6 +87,6 @@ Create demo markets matching apps/mock data:
 ## Implementation Notes
 
 - Use UUID v4 for outcome IDs
-- Currency codes: Market ID + Outcome ID hash (max 3 chars per XRPL spec)
+- Outcome IDs: UUID assigned at market creation
 - Keep old yes_currency_code/no_currency_code columns for backward compat
 - SQLite ALTER TABLE limitations: may need table recreation for some changes

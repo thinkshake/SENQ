@@ -34,14 +34,14 @@ Each phase builds on the previous. No parallel execution.
 | schema-migration | Existing data migration | Keep old columns, add new ones |
 | api-extension | Breaking API changes | Version responses, update frontend in sync |
 | ui-foundation | shadcn version conflicts | Use apps/mock versions, test early |
-| market-pages | XRPL transaction changes | Multi-outcome tokens need new currency codes |
+| market-pages | EVM contract integration | Multi-outcome tokens need new currency codes |
 | user-features | Weight calculation edge cases | Cap at 0.5-3.0 range |
 
 ## Definition of Done
 
 - All phases complete
 - Docker compose runs successfully
-- GemWallet can connect
+- MetaMask can connect
 - Can view markets with multiple outcomes
 - Can place bet on any outcome
 - Portfolio shows positions

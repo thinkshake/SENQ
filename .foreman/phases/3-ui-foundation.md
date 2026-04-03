@@ -95,7 +95,7 @@ export function cn(...inputs: ClassValue[]) { ... }
 // Currency formatting (XRP instead of JPYC)
 export function formatXrp(drops: string | number): string {
   const xrp = Number(drops) / 1_000_000;
-  return `${xrp.toLocaleString("ja-JP")} XRP`;
+  return `${jpyc.toLocaleString("ja-JP")} JPYC`;
 }
 
 export function formatXrpCompact(drops: string | number): string {
@@ -114,14 +114,14 @@ export function xrpToDrops(xrp: number): string {
 - [ ] Tailwind styles match apps/mock design
 - [ ] All shadcn components render correctly
 - [ ] Toast notifications work
-- [ ] WalletContext still connects GemWallet
+- [ ] WalletContext still connects MetaMask
 - [ ] UserContext loads attributes
 - [ ] No TypeScript errors
 - [ ] `bun run dev` starts without errors
 
 ## Implementation Notes
 
-- Keep existing WalletContext GemWallet logic intact
-- Remove apps/mock JPYC references, replace with XRP
+- Keep existing WalletContext MetaMask logic intact
+- Use JPYC amounts from apps/mock as-is
 - Test responsive breakpoints work
 - Check font loading (if custom fonts used)
