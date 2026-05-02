@@ -8,8 +8,7 @@ export function HeroSection() {
         {"日本ネイティブ予測市場"}
       </h2>
       <p className="mx-auto mt-4 max-w-lg text-base text-muted-foreground lg:text-lg">
-        独自の属性重み付け技術で薄い流動性でも高精度な予測を実現。<br />
-        日本テーマに特化した、日本人が安心して参加できる予測市場。
+        日本テーマに特化した、日本人が安心して参加できる予測市場。「プライバシーデータ x Betの重み付け」技術で、少数参加者・低流動性でも高精度な予測を実現。
       </p>
     </section>
   )
