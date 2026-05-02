@@ -28,7 +28,7 @@ export function Header() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">M</span>
             </div>
-            <span className="font-bold text-xl">MITATE</span>
+            <span className="font-bold text-xl">SENQ</span>
           </Link>
 
           {/* Navigation - Desktop */}

@@ -42,7 +42,7 @@ import {
 } from "@/lib/api";
 import { isInstalled, submitTransaction } from "@gemwallet/api";
 
-const ADMIN_KEY_STORAGE = "mitate-admin-key";
+const ADMIN_KEY_STORAGE = "senq-admin-key";
 
 function getStoredKey(): string {
   if (typeof window === "undefined") return "";

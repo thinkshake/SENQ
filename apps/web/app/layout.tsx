@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MITATE — 予測マーケット",
+  title: "SENQ — 予測マーケット",
   description: "日本初の属性重み付け型予測マーケット",
 };
 
@@ -48,8 +48,8 @@ export default function RootLayout({
                   <footer className="mt-20 border-t border-border py-8">
                     <div className="mx-auto max-w-6xl px-4 lg:px-6">
                       <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-                        <span className="font-mono tracking-widest">MITATE</span>
-                        <span>© 2026 MITATE. XRPL Parimutuel Prediction Market.</span>
+                        <span className="font-mono tracking-widest">SENQ</span>
+                        <span>© 2026 SENQ. XRPL Parimutuel Prediction Market.</span>
                       </div>
                     </div>
                   </footer>
