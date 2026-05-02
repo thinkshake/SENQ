@@ -19,9 +19,10 @@ services:
     #   - ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-key}
     env_file:
       - ./apps/api/.env
+    command: ["bun", "run", "src/index.ts"]
     volumes:
       - api-data:/data
-      - ./apps/api/src:/app/src:ro
+      - ./apps/api/src:/app/src
     healthcheck:
       test: ["CMD", "bun", "-e", "const r = await fetch('http://localhost:3001/health'); if (!r.ok) process.exit(1)"]
       interval: 30s
